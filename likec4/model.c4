@@ -1,0 +1,96 @@
+model{
+    users = system_ext "Пользователи"{
+        summary 'Пользователи системы'
+        style {
+            shape person
+            icon: bootstrap:person
+        }
+    }
+    system = system 'Система'{
+        summary 'Система обработки пользовательских запросов'
+
+        front = user_interface {
+            summary 'Веб-интерфейс для взаимодействия с системой'
+            technology '[React]'
+        }
+        api-gateway = container {
+            summary 'Обработка входящих запросов, маршрутизация, аутентификация и авторизация'
+            technology 'Sping Cloud Gateway'
+            icon aws:api-gateway
+        }
+        iam = system {
+            description  'Управление доступом к системе'
+            summary 'Identity and Access Management'
+            technology '[Keycloak]'
+            icon tech:oauth
+        }
+
+        backend = system 'Обработка пользовательских запросов'{
+            technology '[Spring]'
+            summary 'Система обработки бизнес-логики'
+            icon bootstrap:gear-wide-connected
+        }
+
+        storage = system 'Хранение данных'{
+            summary 'Хранение данных пользователя'
+            icon bootstrap:database
+
+            database = database 'База данных'{
+                technology '[PostgreSQL]'
+                summary 'Хранение данных пользователей и их запросов'
+                icon tech:postgresql
+            }
+        }    
+        monitoring = system 'Система мониторинга'{
+            summary 'Мониторинг состояния системы'
+            icon bootstrap:grip-horizontal
+
+        }   
+        
+    }
+
+    iam_ext = system_ext "IAM"{
+        summary 'Внешняя система аутентификации'
+        technology '[OAuth2]'
+    }
+    payment = system_ext 'Платежная система'{
+        summary 'Обработка платежей'
+    }
+    notification = system_ext 'Уведомления'{
+        summary 'Отправка уведомлений пользователям'
+    }
+
+
+    // ==== relations ====
+    users -> front {
+        #sync
+    }
+    front -> api-gateway {
+        #sync
+    }
+    api-gateway -> backend {
+        #sync
+    }
+    api-gateway -> iam {
+        #sync
+    }
+    api-gateway -> iam_ext{
+        #sync
+    }
+    backend -> database {
+        #sync
+    }
+    backend -> payment {
+        #sync
+    }
+    backend -> notification {
+        #async
+    }
+    monitoring -> front
+    monitoring -> api-gateway
+    monitoring -> backend
+    monitoring -> database
+    monitoring -> iam
+
+
+}
