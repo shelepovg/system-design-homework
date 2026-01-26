@@ -1,1 +1,790 @@
 === Модель данных
+
+==== Общая модель данных
+
+Система использует микросервисную архитектуру с паттерном "Database per Service", что означает, что каждый микросервис имеет собственную базу данных. Общая модель данных разделена на следующие домены:
+
+*Домен пользователей и аутентификации*::
+  Управление пользователями, сессиями, токенами доступа и правами доступа.
+
+*Домен обработки запросов*::
+  Хранение пользовательских запросов, их статусов и результатов обработки.
+
+*Домен платежей*::
+  Управление транзакциями, платежами и финансовыми операциями.
+
+*Домен уведомлений*::
+  Хранение истории уведомлений и статусов их доставки.
+
+*Домен аудита и логирования*::
+  Хранение логов операций, событий безопасности и аудиторских записей.
+
+*Домен мониторинга*::
+  Хранение метрик производительности, health checks и статистики системы.
+
+==== Описание структур данных
+
+===== Домен пользователей и аутентификации
+
+*Сервис: User Service*
+*База данных: PostgreSQL (users_db)*
+
+[source,sql]
+----
+-- Схема: users
+
+-- Таблица: users
+CREATE TABLE users (
+    user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    external_id VARCHAR(255) UNIQUE NOT NULL, -- ID из внешнего IAM
+    email VARCHAR(255) UNIQUE NOT NULL,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    phone VARCHAR(20),
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE', -- ACTIVE, INACTIVE, SUSPENDED, DELETED
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_login_at TIMESTAMP WITH TIME ZONE,
+    metadata JSONB, -- Дополнительные данные пользователя
+    version INTEGER NOT NULL DEFAULT 1 -- Для optimistic locking
+);
+
+CREATE INDEX idx_users_external_id ON users(external_id);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_status ON users(status);
+CREATE INDEX idx_users_created_at ON users(created_at);
+
+-- Таблица: user_roles
+CREATE TABLE user_roles (
+    role_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    role_name VARCHAR(50) NOT NULL, -- ADMIN, USER, OPERATOR, VIEWER
+    granted_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    granted_by UUID REFERENCES users(user_id),
+    expires_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT unique_user_role UNIQUE(user_id, role_name)
+);
+
+CREATE INDEX idx_user_roles_user_id ON user_roles(user_id);
+CREATE INDEX idx_user_roles_role_name ON user_roles(role_name);
+
+-- Таблица: user_sessions
+CREATE TABLE user_sessions (
+    session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    access_token_hash VARCHAR(255) NOT NULL, -- Хэш JWT токена
+    refresh_token_hash VARCHAR(255),
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    revoked_at TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE INDEX idx_user_sessions_user_id ON user_sessions(user_id);
+CREATE INDEX idx_user_sessions_access_token ON user_sessions(access_token_hash);
+CREATE INDEX idx_user_sessions_expires_at ON user_sessions(expires_at);
+CREATE INDEX idx_user_sessions_active ON user_sessions(is_active, expires_at);
+
+-- Таблица: user_permissions
+CREATE TABLE user_permissions (
+    permission_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    resource_type VARCHAR(100) NOT NULL, -- REQUEST, PAYMENT, NOTIFICATION и т.д.
+    resource_id UUID,
+    permission_type VARCHAR(50) NOT NULL, -- READ, WRITE, DELETE, EXECUTE
+    granted_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX idx_user_permissions_user_id ON user_permissions(user_id);
+CREATE INDEX idx_user_permissions_resource ON user_permissions(resource_type, resource_id);
+----
+
+===== Домен обработки запросов
+
+*Сервис: Request Processing Service*
+*База данных: PostgreSQL (requests_db)*
+
+[source,sql]
+----
+-- Схема: requests
+
+-- Таблица: user_requests
+CREATE TABLE user_requests (
+    request_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL, -- Референс на users.user_id (без FK из-за микросервисов)
+    request_type VARCHAR(50) NOT NULL, -- PROCESS_DATA, GENERATE_REPORT, EXPORT_DATA и т.д.
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING', -- PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED
+    priority INTEGER NOT NULL DEFAULT 5, -- 1-10, где 1 - наивысший приоритет
+    request_data JSONB NOT NULL, -- Входные данные запроса
+    result_data JSONB, -- Результаты обработки
+    error_message TEXT,
+    error_code VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    started_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    processing_time_ms INTEGER,
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    max_retries INTEGER NOT NULL DEFAULT 3,
+    metadata JSONB, -- Дополнительные метаданные
+    version INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE INDEX idx_user_requests_user_id ON user_requests(user_id);
+CREATE INDEX idx_user_requests_status ON user_requests(status);
+CREATE INDEX idx_user_requests_created_at ON user_requests(created_at);
+CREATE INDEX idx_user_requests_type ON user_requests(request_type);
+CREATE INDEX idx_user_requests_priority ON user_requests(priority, created_at);
+CREATE INDEX idx_user_requests_status_created ON user_requests(status, created_at) WHERE status IN ('PENDING', 'PROCESSING');
+
+-- Таблица: request_history
+CREATE TABLE request_history (
+    history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    request_id UUID NOT NULL REFERENCES user_requests(request_id) ON DELETE CASCADE,
+    status VARCHAR(30) NOT NULL,
+    changed_by UUID, -- user_id или system
+    changed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    comment TEXT,
+    metadata JSONB
+);
+
+CREATE INDEX idx_request_history_request_id ON request_history(request_id);
+CREATE INDEX idx_request_history_changed_at ON request_history(changed_at);
+
+-- Таблица: request_attachments
+CREATE TABLE request_attachments (
+    attachment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    request_id UUID NOT NULL REFERENCES user_requests(request_id) ON DELETE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
+    file_size BIGINT NOT NULL,
+    content_type VARCHAR(100),
+    storage_path VARCHAR(500) NOT NULL, -- Путь в объектном хранилище
+    uploaded_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    uploaded_by UUID NOT NULL
+);
+
+CREATE INDEX idx_request_attachments_request_id ON request_attachments(request_id);
+----
+
+===== Домен платежей
+
+*Сервис: Payment Service*
+*База данных: PostgreSQL (payments_db)*
+
+[source,sql]
+----
+-- Схема: payments
+
+-- Таблица: payment_transactions
+CREATE TABLE payment_transactions (
+    transaction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    request_id UUID, -- Референс на user_requests.request_id
+    external_transaction_id VARCHAR(255) UNIQUE, -- ID из внешней платежной системы
+    amount DECIMAL(15, 2) NOT NULL CHECK (amount > 0),
+    currency VARCHAR(3) NOT NULL DEFAULT 'USD', -- ISO 4217
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING', -- PENDING, PROCESSING, COMPLETED, FAILED, REFUNDED, CANCELLED
+    payment_method VARCHAR(50) NOT NULL, -- CREDIT_CARD, BANK_TRANSFER, DIGITAL_WALLET
+    payment_provider VARCHAR(50) NOT NULL, -- Название платежного провайдера
+    description TEXT,
+    metadata JSONB, -- Дополнительные данные транзакции
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    expires_at TIMESTAMP WITH TIME ZONE,
+    version INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE INDEX idx_payment_transactions_user_id ON payment_transactions(user_id);
+CREATE INDEX idx_payment_transactions_request_id ON payment_transactions(request_id);
+CREATE INDEX idx_payment_transactions_status ON payment_transactions(status);
+CREATE INDEX idx_payment_transactions_external_id ON payment_transactions(external_transaction_id);
+CREATE INDEX idx_payment_transactions_created_at ON payment_transactions(created_at);
+CREATE INDEX idx_payment_transactions_status_created ON payment_transactions(status, created_at) WHERE status IN ('PENDING', 'PROCESSING');
+
+-- Таблица: payment_history
+CREATE TABLE payment_history (
+    history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_id UUID NOT NULL REFERENCES payment_transactions(transaction_id) ON DELETE CASCADE,
+    status VARCHAR(30) NOT NULL,
+    changed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    changed_by VARCHAR(100), -- user_id или system
+    external_status_code VARCHAR(50),
+    external_status_message TEXT,
+    metadata JSONB
+);
+
+CREATE INDEX idx_payment_history_transaction_id ON payment_history(transaction_id);
+CREATE INDEX idx_payment_history_changed_at ON payment_history(changed_at);
+
+-- Таблица: payment_refunds
+CREATE TABLE payment_refunds (
+    refund_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_id UUID NOT NULL REFERENCES payment_transactions(transaction_id),
+    amount DECIMAL(15, 2) NOT NULL CHECK (amount > 0),
+    reason TEXT,
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING', -- PENDING, PROCESSING, COMPLETED, FAILED
+    external_refund_id VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    metadata JSONB
+);
+
+CREATE INDEX idx_payment_refunds_transaction_id ON payment_refunds(transaction_id);
+CREATE INDEX idx_payment_refunds_status ON payment_refunds(status);
+
+-- Таблица: payment_outbox (для Outbox Pattern)
+CREATE TABLE payment_outbox (
+    outbox_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_id UUID NOT NULL REFERENCES payment_transactions(transaction_id) ON DELETE CASCADE,
+    event_type VARCHAR(100) NOT NULL, -- PAYMENT_CREATED, PAYMENT_COMPLETED, PAYMENT_FAILED
+    event_data JSONB NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- PENDING, PROCESSED, FAILED
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP WITH TIME ZONE,
+    next_retry_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX idx_payment_outbox_status ON payment_outbox(status, created_at);
+CREATE INDEX idx_payment_outbox_retry ON payment_outbox(next_retry_at) WHERE status = 'PENDING';
+----
+
+===== Домен уведомлений
+
+*Сервис: Notification Service*
+*База данных: PostgreSQL (notifications_db)*
+
+[source,sql]
+----
+-- Схема: notifications
+
+-- Таблица: notifications
+CREATE TABLE notifications (
+    notification_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    request_id UUID, -- Референс на user_requests.request_id
+    transaction_id UUID, -- Референс на payment_transactions.transaction_id
+    notification_type VARCHAR(50) NOT NULL, -- EMAIL, SMS, PUSH, IN_APP
+    channel VARCHAR(50) NOT NULL, -- EMAIL, SMS, PUSH, WEBHOOK
+    subject VARCHAR(255),
+    message TEXT NOT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING', -- PENDING, SENT, DELIVERED, FAILED, BOUNCED
+    priority INTEGER NOT NULL DEFAULT 5, -- 1-10
+    scheduled_at TIMESTAMP WITH TIME ZONE,
+    sent_at TIMESTAMP WITH TIME ZONE,
+    delivered_at TIMESTAMP WITH TIME ZONE,
+    external_message_id VARCHAR(255), -- ID из внешней системы уведомлений
+    error_message TEXT,
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    max_retries INTEGER NOT NULL DEFAULT 3,
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE INDEX idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX idx_notifications_status ON notifications(status);
+CREATE INDEX idx_notifications_scheduled_at ON notifications(scheduled_at) WHERE status = 'PENDING';
+CREATE INDEX idx_notifications_type ON notifications(notification_type);
+CREATE INDEX idx_notifications_created_at ON notifications(created_at);
+
+-- Таблица: notification_templates
+CREATE TABLE notification_templates (
+    template_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_name VARCHAR(100) UNIQUE NOT NULL,
+    notification_type VARCHAR(50) NOT NULL,
+    subject_template TEXT,
+    message_template TEXT NOT NULL,
+    variables JSONB, -- Описание переменных шаблона
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_notification_templates_name ON notification_templates(template_name);
+CREATE INDEX idx_notification_templates_active ON notification_templates(is_active);
+
+-- Таблица: notification_outbox (для Outbox Pattern)
+CREATE TABLE notification_outbox (
+    outbox_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    notification_id UUID NOT NULL REFERENCES notifications(notification_id) ON DELETE CASCADE,
+    event_type VARCHAR(100) NOT NULL,
+    event_data JSONB NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP WITH TIME ZONE,
+    next_retry_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX idx_notification_outbox_status ON notification_outbox(status, created_at);
+----
+
+===== Домен аудита и логирования
+
+*Сервис: Audit Service*
+*База данных: PostgreSQL (audit_db) + Elasticsearch (для поиска)*
+
+[source,sql]
+----
+-- Схема: audit
+
+-- Таблица: audit_logs
+CREATE TABLE audit_logs (
+    log_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID,
+    session_id UUID,
+    service_name VARCHAR(100) NOT NULL, -- Название микросервиса
+    action VARCHAR(100) NOT NULL, -- CREATE, UPDATE, DELETE, READ, EXECUTE
+    resource_type VARCHAR(100) NOT NULL, -- USER, REQUEST, PAYMENT, NOTIFICATION
+    resource_id UUID,
+    request_id UUID, -- Correlation ID для трейсинга
+    ip_address INET,
+    user_agent TEXT,
+    request_data JSONB,
+    response_data JSONB,
+    status_code INTEGER,
+    error_message TEXT,
+    duration_ms INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+) PARTITION BY RANGE (created_at);
+
+-- Партиционирование по месяцам для оптимизации
+CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
+CREATE INDEX idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
+CREATE INDEX idx_audit_logs_request_id ON audit_logs(request_id);
+CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
+CREATE INDEX idx_audit_logs_service_action ON audit_logs(service_name, action);
+
+-- Таблица: security_events
+CREATE TABLE security_events (
+    event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_type VARCHAR(50) NOT NULL, -- LOGIN_SUCCESS, LOGIN_FAILURE, UNAUTHORIZED_ACCESS, SUSPICIOUS_ACTIVITY
+    user_id UUID,
+    ip_address INET NOT NULL,
+    user_agent TEXT,
+    severity VARCHAR(20) NOT NULL, -- LOW, MEDIUM, HIGH, CRITICAL
+    description TEXT NOT NULL,
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+) PARTITION BY RANGE (created_at);
+
+CREATE INDEX idx_security_events_type ON security_events(event_type);
+CREATE INDEX idx_security_events_user_id ON security_events(user_id);
+CREATE INDEX idx_security_events_severity ON security_events(severity, created_at);
+CREATE INDEX idx_security_events_created_at ON security_events(created_at);
+----
+
+===== Домен мониторинга
+
+*Сервис: Monitoring Service*
+*База данных: Time-series DB (TimescaleDB) + Prometheus*
+
+[source,sql]
+----
+-- Схема: monitoring
+
+-- Таблица: system_metrics (TimescaleDB)
+CREATE TABLE system_metrics (
+    metric_id BIGSERIAL,
+    service_name VARCHAR(100) NOT NULL,
+    metric_name VARCHAR(200) NOT NULL,
+    metric_value DOUBLE PRECISION NOT NULL,
+    metric_type VARCHAR(50) NOT NULL, -- COUNTER, GAUGE, HISTOGRAM, SUMMARY
+    labels JSONB, -- Prometheus labels
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Преобразование в hypertable для TimescaleDB
+SELECT create_hypertable('system_metrics', 'timestamp', chunk_time_interval => INTERVAL '1 hour');
+
+CREATE INDEX idx_system_metrics_service ON system_metrics(service_name, timestamp DESC);
+CREATE INDEX idx_system_metrics_name ON system_metrics(metric_name, timestamp DESC);
+
+-- Таблица: health_checks
+CREATE TABLE health_checks (
+    check_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    service_name VARCHAR(100) NOT NULL,
+    check_type VARCHAR(50) NOT NULL, -- LIVENESS, READINESS, STARTUP
+    status VARCHAR(20) NOT NULL, -- HEALTHY, UNHEALTHY, DEGRADED
+    response_time_ms INTEGER,
+    error_message TEXT,
+    metadata JSONB,
+    checked_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_health_checks_service ON health_checks(service_name, checked_at DESC);
+CREATE INDEX idx_health_checks_status ON health_checks(status, checked_at DESC);
+
+-- Таблица: alerts
+CREATE TABLE alerts (
+    alert_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    alert_name VARCHAR(200) NOT NULL,
+    service_name VARCHAR(100),
+    severity VARCHAR(20) NOT NULL, -- INFO, WARNING, CRITICAL
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE', -- ACTIVE, RESOLVED, ACKNOWLEDGED
+    description TEXT NOT NULL,
+    metric_name VARCHAR(200),
+    threshold_value DOUBLE PRECISION,
+    current_value DOUBLE PRECISION,
+    started_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP WITH TIME ZONE,
+    acknowledged_by UUID,
+    acknowledged_at TIMESTAMP WITH TIME ZONE,
+    metadata JSONB
+);
+
+CREATE INDEX idx_alerts_status ON alerts(status, started_at DESC);
+CREATE INDEX idx_alerts_severity ON alerts(severity, started_at DESC);
+CREATE INDEX idx_alerts_service ON alerts(service_name, started_at DESC);
+----
+
+===== Кэш-слой (Redis)
+
+*Структуры данных в Redis:*
+
+[source,text]
+----
+# Кэш пользовательских данных
+Key: user:{user_id}
+TTL: 3600 секунд (1 час)
+Value: JSON с данными пользователя
+
+# Кэш сессий
+Key: session:{session_id}
+TTL: 7200 секунд (2 часа)
+Value: JSON с данными сессии
+
+# Кэш токенов доступа
+Key: token:{token_hash}
+TTL: 1800 секунд (30 минут)
+Value: user_id, roles, permissions
+
+# Кэш результатов запросов
+Key: request:{request_id}
+TTL: 86400 секунд (24 часа)
+Value: JSON с результатами запроса
+
+# Rate limiting
+Key: rate_limit:{user_id}:{endpoint}
+TTL: 60 секунд
+Value: счетчик запросов
+
+# Блокировки (для распределенных блокировок)
+Key: lock:{resource_type}:{resource_id}
+TTL: 30 секунд
+Value: уникальный идентификатор блокировки
+----
+
+==== Определение зависимостей между данными
+
+===== Логические зависимости
+
+*Зависимости между доменами:*
+
+[source,text]
+----
+users (User Service)
+  ├── user_requests (Request Service) - user_id ссылается на users.user_id
+  ├── payment_transactions (Payment Service) - user_id ссылается на users.user_id
+  └── notifications (Notification Service) - user_id ссылается на users.user_id
+
+user_requests (Request Service)
+  ├── payment_transactions (Payment Service) - request_id ссылается на user_requests.request_id
+  ├── notifications (Notification Service) - request_id ссылается на user_requests.request_id
+  └── audit_logs (Audit Service) - resource_id ссылается на user_requests.request_id
+
+payment_transactions (Payment Service)
+  ├── notifications (Notification Service) - transaction_id ссылается на payment_transactions.transaction_id
+  └── audit_logs (Audit Service) - resource_id ссылается на payment_transactions.transaction_id
+
+notifications (Notification Service)
+  └── audit_logs (Audit Service) - resource_id ссылается на notifications.notification_id
+----
+
+===== Зависимости целостности данных
+
+*Строгие зависимости (требуют синхронной проверки):*
+
+*Пользователь → Запросы*::
+  * Тип: Слабая зависимость (без внешнего ключа)
+  * Обработка: Валидация существования пользователя при создании запроса
+  * При удалении пользователя: Каскадное удаление или мягкое удаление (soft delete)
+
+*Запрос → Платеж*::
+  * Тип: Опциональная зависимость
+  * Обработка: Платеж может существовать без запроса
+  * При удалении запроса: Платеж сохраняется, но request_id становится NULL
+
+*Платеж → Уведомления*::
+  * Тип: Слабая зависимость
+  * Обработка: Уведомления создаются асинхронно через Event Bus
+  * При удалении платежа: Уведомления сохраняются для аудита
+
+===== Зависимости через события (Event-Driven)
+
+*Асинхронные зависимости через Event Bus:*
+
+[source,text]
+----
+User Created Event
+  └── Создание начальных настроек пользователя
+  └── Отправка приветственного уведомления
+
+Request Created Event
+  └── Создание записи в audit_logs
+  └── Инициация платежа (если требуется)
+
+Payment Completed Event
+  └── Обновление статуса запроса
+  └── Отправка уведомления пользователю
+  └── Создание записи в audit_logs
+
+Payment Failed Event
+  └── Обновление статуса запроса
+  └── Отправка уведомления об ошибке
+  └── Создание записи в audit_logs
+
+Notification Sent Event
+  └── Обновление статуса уведомления
+  └── Создание записи в audit_logs
+----
+
+===== Зависимости через Outbox Pattern
+
+*Гарантированная доставка событий:*
+
+*Payment Outbox*::
+  * События: PAYMENT_CREATED, PAYMENT_COMPLETED, PAYMENT_FAILED
+  * Потребители: Notification Service, Audit Service, Request Service
+  * Гарантия: At-least-once delivery
+
+*Notification Outbox*::
+  * События: NOTIFICATION_SENT, NOTIFICATION_DELIVERED, NOTIFICATION_FAILED
+  * Потребители: Audit Service
+  * Гарантия: At-least-once delivery
+
+==== Определение требований консистентности данных
+
+===== Уровни консистентности
+
+===== Строгая консистентность (Strong Consistency)
+
+*Требуется для следующих операций:*
+
+*Финансовые транзакции*::
+  * Операции: Создание платежа, обновление баланса, обработка возвратов
+  * Требования:
+    ** ACID транзакции в рамках одного сервиса
+    ** Saga Pattern для распределенных транзакций
+    ** Идемпотентность операций
+    ** Версионирование записей (optimistic locking)
+  * Компоненты: payment_transactions, payment_refunds
+  * RPO: 0 (zero data loss)
+
+*Управление пользователями*::
+  * Операции: Создание пользователя, изменение ролей, блокировка аккаунта
+  * Требования:
+    ** ACID транзакции
+    ** Версионирование записей
+    ** Аудит всех изменений
+  * Компоненты: users, user_roles, user_permissions
+  * RPO: 0 (zero data loss)
+
+*Критичные операции с запросами*::
+  * Операции: Изменение статуса запроса, обновление результатов
+  * Требования:
+    ** ACID транзакции
+    ** Версионирование записей
+    ** История изменений
+  * Компоненты: user_requests, request_history
+  * RPO: 0 (zero data loss)
+
+===== Eventual Consistency (Слабая консистентность)
+
+*Допустима для следующих операций:*
+
+*Уведомления*::
+  * Операции: Отправка уведомлений, обновление статуса доставки
+  * Требования:
+    ** Асинхронная обработка через Event Bus
+    ** Retry механизм при сбоях
+    ** Допустима задержка до 5 минут
+  * Компоненты: notifications, notification_outbox
+  * RPO: Допустима потеря некритичных уведомлений
+
+*Аудит и логирование*::
+  * Операции: Запись логов, метрик, событий безопасности
+  * Требования:
+    ** Асинхронная запись
+    ** Допустима задержка до 1 минуты
+    ** At-least-once delivery
+  * Компоненты: audit_logs, security_events, system_metrics
+  * RPO: Допустима потеря части логов при критических сбоях
+
+*Кэширование*::
+  * Операции: Обновление кэша, инвалидация кэша
+  * Требования:
+    ** Cache-Aside pattern
+    ** TTL-based expiration
+    ** Допустима устаревшая информация до TTL
+  * Компоненты: Redis Cache
+  * RPO: Допустима потеря кэша (данные восстанавливаются из БД)
+
+===== Требования консистентности по доменам
+
+[options="header",cols="2,2,2,2"]
+|===
+| Домен | Уровень консистентности | Механизм обеспечения | RPO
+| Пользователи | Строгая | ACID транзакции, версионирование | 0
+| Запросы (критичные операции) | Строгая | ACID транзакции, версионирование | 0
+| Запросы (некритичные операции) | Eventual | Асинхронная обработка | < 1 минута
+| Платежи | Строгая | ACID транзакции, Saga Pattern | 0
+| Уведомления | Eventual | Event Bus, Outbox Pattern | < 5 минут
+| Аудит | Eventual | Асинхронная запись | < 1 минута
+| Мониторинг | Eventual | Time-series DB, batch writes | < 30 секунд
+| Кэш | Eventual | TTL, Cache-Aside | Допустима потеря
+|===
+
+===== Механизмы обеспечения консистентности
+
+*Транзакции и изоляция*::
+
+*Уровень изоляции PostgreSQL*::
+  * По умолчанию: READ COMMITTED
+  * Для финансовых операций: SERIALIZABLE
+  * Для чтения: READ COMMITTED с использованием реплик
+
+*Версионирование записей (Optimistic Locking)*::
+  * Поля version в критичных таблицах
+  * Проверка версии при обновлении
+  * Обработка конфликтов через retry
+
+*Распределенные транзакции (Saga Pattern)*::
+
+*Choreography-based Saga*::
+  * Применение: Обработка платежей с несколькими шагами
+  * Компенсирующие транзакции при ошибках
+  * Идемпотентность операций
+
+*Orchestration-based Saga*::
+  * Применение: Сложные бизнес-процессы
+  * Централизованное управление состоянием
+  * Отслеживание прогресса выполнения
+
+*Outbox Pattern для событий*::
+
+*Механизм*::
+  1. Запись в основную таблицу (ACID транзакция)
+  2. Одновременная запись события в таблицу outbox
+  3. Асинхронная публикация событий из outbox
+  4. Удаление обработанных событий
+
+*Гарантии*::
+  * At-least-once delivery
+  * Идемпотентность обработчиков событий
+  * Retry механизм с exponential backoff
+
+*Репликация данных*::
+
+*Master-Replica репликация*::
+  * Синхронная репликация для критичных данных (максимум 1 реплика)
+  * Асинхронная репликация для остальных данных
+  * Автоматический failover при отказе master
+
+*Географическая репликация*::
+  * Репликация в 3 регионах
+  * Асинхронная репликация между регионами
+  * Eventual consistency между регионами
+
+===== Правила консистентности для критичных операций
+
+*Правило 1: Идемпотентность*::
+  * Все операции с платежами должны быть идемпотентными
+  * Использование уникальных идентификаторов транзакций
+  * Проверка существования перед созданием
+
+*Правило 2: Атомарность изменений*::
+  * Критичные изменения выполняются в рамках одной транзакции
+  * Использование транзакционных outbox для событий
+  * Компенсирующие действия при ошибках
+
+*Правило 3: Аудит критичных операций*::
+  * Все изменения финансовых данных логируются
+  * История изменений сохраняется в неизменяемом виде
+  * Корреляция событий через request_id
+
+*Правило 4: Валидация зависимостей*::
+  * Проверка существования связанных сущностей перед созданием
+  * Использование внешних ключей где возможно
+  * Валидация на уровне приложения для микросервисов
+
+*Правило 5: Версионирование*::
+  * Все критичные таблицы имеют поле version
+  * Проверка версии при обновлении
+  * Обработка конфликтов через retry или уведомление пользователя
+
+===== Сценарии обработки неконсистентности
+
+*Сценарий 1: Потеря события из Outbox*::
+  * Проблема: Событие не было обработано из outbox
+  * Решение:
+    ** Периодическая проверка необработанных событий (каждые 5 минут)
+    ** Retry с exponential backoff
+    ** Алерт при превышении максимального количества попыток
+  * Компенсация: Ручная обработка через административный интерфейс
+
+*Сценарий 2: Расхождение данных между сервисами*::
+  * Проблема: Данные в разных сервисах не синхронизированы
+  * Решение:
+    ** Периодическая синхронизация через события
+    ** Reconciliation job для критичных данных
+    ** Мониторинг расхождений
+  * Компенсация: Ручная синхронизация при обнаружении расхождений
+
+*Сценарий 3: Конфликт версий при обновлении*::
+  * Проблема: Optimistic locking обнаружил конфликт версий
+  * Решение:
+    ** Автоматический retry с чтением актуальных данных
+    ** Уведомление пользователя о необходимости повторить операцию
+    ** Логирование конфликтов для анализа
+  * Компенсация: Ручное разрешение конфликтов администратором
+
+*Сценарий 4: Отказ реплики БД*::
+  * Проблема: Реплика БД недоступна, чтение замедлено
+  * Решение:
+    ** Автоматическое переключение на другую реплику
+    ** Fallback на master при недоступности всех реплик
+    ** Мониторинг состояния реплик
+  * Компенсация: Временное использование master для чтения
+
+===== Метрики консистентности данных
+
+*Мониторинг консистентности*::
+
+[options="header",cols="2,2"]
+|===
+| Метрика | Целевое значение
+| Время репликации данных между регионами | < 5 секунд (95-й перцентиль)
+| Задержка обработки событий из Outbox | < 1 минута (95-й перцентиль)
+| Количество конфликтов версий | < 0.1% от всех обновлений
+| Расхождения данных между сервисами | 0 критичных расхождений
+| Время восстановления после сбоя репликации | < 1 минута
+|===
+
+*Алерты при нарушении консистентности*::
+
+*Критичные алерты*::
+  * Расхождение финансовых данных
+  * Потеря событий из Outbox более 10 минут
+  * Конфликты версий более 1% от обновлений
+  * Недоступность синхронной реплики БД
+
+*Предупреждающие алерты*::
+  * Задержка репликации более 10 секунд
+  * Задержка обработки событий более 5 минут
+  * Конфликты версий более 0.5% от обновлений

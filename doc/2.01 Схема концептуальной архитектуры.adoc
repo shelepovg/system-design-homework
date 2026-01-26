@@ -2,4 +2,4 @@
 
 ifndef::imagesdir[:imagesdir: {docdir}/images]
 
-image::hla.png[]
+image::context.png[]

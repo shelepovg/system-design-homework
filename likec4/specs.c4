@@ -1,0 +1,101 @@
+specification {
+
+  color color_ext #6C6477
+  color color_container #23A2D9
+  color color_software-system #1061B0
+  color color_product #aac1ca
+  color color_system #23A1D0
+  color color_component #23A1D0
+  color color_plane #fbfdfd
+  color color_system_ext #6C6477
+
+  element user_interface {
+    notation "Пользовательский интерфейс"
+    technology "React, TypeScript"
+    style {
+      color color_container
+      shape browser
+      icon tech:chrome
+    }
+  }
+
+  element system {
+    notation ""
+    style {
+      color color_software-system
+      shape rectangle
+      opacity 30%
+
+    }
+  }
+  
+  element system_ext {
+    notation ""
+    style {
+      color color_ext
+      shape rectangle
+    }
+  }
+
+  element container {
+    notation "C4 element Container"
+    style {
+      color color_container
+      shape rectangle
+    }
+  }
+
+  element component {
+    notation "C4 element Component"
+    style {
+      color color_component
+      shape rectangle
+    }
+  }
+
+  element queue {
+    notation "Шина данных"
+    style {
+      color color_container
+      shape queue
+      opacity 20%
+    }
+  }
+
+  element database {
+    notation "База данных"
+    style {
+      color color_container
+      shape storage
+    }
+  }
+
+  element object_storage {
+    notation "Объектное хранилище"
+    style {
+      color color_container
+      shape storage
+      //icon 
+    }
+  }
+
+  element infra {
+    notation "Инфраструктура"
+    style {
+      color sky
+    }
+  }
+  element network {
+    notation "Сетевые устройства"
+    style {
+      color blue
+    }
+  }
+
+  // синхронные вызовы
+  tag sync 
+
+
+  // асинхронные вызовы 
+  tag async
+}

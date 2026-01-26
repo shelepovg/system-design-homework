@@ -1,0 +1,5 @@
+{
+    name: "system",
+    title: "Система",
+    description: 'ДЗ ОТУС system-design'
+}

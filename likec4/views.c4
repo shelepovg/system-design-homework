@@ -1,0 +1,13 @@
+views {
+    view context of system {
+        title 'Контекстная диаграмма'
+        description 'Диаграмма контекста системы'
+        
+        include users,
+                system,
+                system.*,
+                iam_ext,
+                payment,
+                notification
+    }
+}
