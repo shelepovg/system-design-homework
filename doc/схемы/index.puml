@@ -1,0 +1,51 @@
+@startuml
+title "Landscape view"
+top to bottom direction
+
+hide stereotype
+skinparam ranksep 60
+skinparam nodesep 30
+skinparam {
+  arrowFontSize 10
+  defaultTextAlignment center
+  wrapWidth 200
+  maxMessageSize 100
+  shadowing false
+}
+
+skinparam rectangle<<Users>>{
+  BackgroundColor #827a8e
+  FontColor #ffffff
+  BorderColor #6c6477
+}
+skinparam rectangle<<System>>{
+  BackgroundColor #2b85e7
+  FontColor #f1ffff
+  BorderColor #1e73ce
+}
+skinparam rectangle<<Iam_ext>>{
+  BackgroundColor #827a8e
+  FontColor #ffffff
+  BorderColor #6c6477
+}
+skinparam rectangle<<Payment>>{
+  BackgroundColor #827a8e
+  FontColor #ffffff
+  BorderColor #6c6477
+}
+skinparam rectangle<<Notify>>{
+  BackgroundColor #827a8e
+  FontColor #ffffff
+  BorderColor #6c6477
+}
+rectangle "Пользователи\n\nПользователи системы" <<Users>> as Users
+rectangle "Система\n\nСистема обработки пользовательских запросов" <<System>> as System
+rectangle "IAM\n<size:10>[[OAuth2]]</size>\n\nВнешняя система аутентификации" <<Iam_ext>> as Iam_ext
+rectangle "Платежная система\n\nОбработка платежей" <<Payment>> as Payment
+rectangle "Уведомления\n\nОтправка уведомлений пользователям" <<Notify>> as Notification
+
+Users .[#8D8D8D,thickness=2].> System
+System .[#8D8D8D,thickness=2].> Iam_ext
+System .[#8D8D8D,thickness=2].> Payment
+System .[#8D8D8D,thickness=2].> Notification
+@enduml
