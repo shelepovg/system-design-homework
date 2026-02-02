@@ -14,14 +14,19 @@ skinparam {
 }
 
 skinparam rectangle<<Users>>{
-  BackgroundColor #827a8e
-  FontColor #ffffff
-  BorderColor #6c6477
+  BackgroundColor #2b85e7
+  FontColor #f1ffff
+  BorderColor #1e73ce
 }
 skinparam rectangle<<SystemMonitoring>>{
   BackgroundColor #2b85e7
   FontColor #f1ffff
   BorderColor #1e73ce
+}
+skinparam rectangle<<SystemLoadBalancer>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
 }
 skinparam rectangle<<SystemFront>>{
   BackgroundColor #23a2d9
@@ -43,54 +48,44 @@ skinparam rectangle<<SystemBackend>>{
   FontColor #f1ffff
   BorderColor #1e73ce
 }
-skinparam rectangle<<Iam_ext>>{
-  BackgroundColor #827a8e
-  FontColor #ffffff
-  BorderColor #6c6477
-}
 skinparam rectangle<<SystemStorage>>{
   BackgroundColor #2b85e7
   FontColor #f1ffff
   BorderColor #1e73ce
 }
-skinparam rectangle<<Payment>>{
+skinparam rectangle<<System_ext>>{
   BackgroundColor #827a8e
   FontColor #ffffff
   BorderColor #6c6477
 }
-skinparam rectangle<<Notify>>{
-  BackgroundColor #827a8e
-  FontColor #ffffff
-  BorderColor #6c6477
-}
-rectangle "Пользователи\n\nПользователи системы" <<Users>> as Users
+rectangle "Пользователи\n\nКлиенты: веб-браузер, Android, iOS" <<Users>> as Users
 rectangle "Система" <<System>> as System {
   skinparam RectangleBorderColor<<System>> #2b85e7
   skinparam RectangleFontColor<<System>> #2b85e7
   skinparam RectangleBorderStyle<<System>> dashed
 
-  rectangle "Система мониторинга\n\nМониторинг состояния системы" <<SystemMonitoring>> as SystemMonitoring
+  rectangle "Система мониторинга\n\nСбор логов и метрик, обработка, хранение, дашборды и алертинг" <<SystemMonitoring>> as SystemMonitoring
+  rectangle "load-balancer\n<size:10>[[Nginx]]</size>\n\nЕдиная точка входа: распределение трафика, TLS termination" <<SystemLoadBalancer>> as SystemLoadBalancer
   rectangle "front\n<size:10>[[React]]</size>\n\nВеб-интерфейс для взаимодействия с системой" <<SystemFront>> as SystemFront
-  rectangle "api-gateway\n<size:10>[Sping Cloud Gateway]</size>\n\nОбработка входящих запросов, маршрутизация, аутентификация и авторизация" <<SystemApiGateway>> as SystemApiGateway
+  rectangle "api-gateway\n<size:10>[Spring Cloud Gateway]</size>\n\nМаршрутизация API, аутентификация, авторизация, rate limiting" <<SystemApiGateway>> as SystemApiGateway
   rectangle "iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management" <<SystemIam>> as SystemIam
   rectangle "Обработка пользовательских запросов\n<size:10>[[Spring]]</size>\n\nСистема обработки бизнес-логики" <<SystemBackend>> as SystemBackend
   rectangle "Хранение данных\n\nХранение данных пользователя" <<SystemStorage>> as SystemStorage
 }
-rectangle "IAM\n<size:10>[[OAuth2]]</size>\n\nВнешняя система аутентификации" <<Iam_ext>> as Iam_ext
-rectangle "Платежная система\n\nОбработка платежей" <<Payment>> as Payment
-rectangle "Уведомления\n\nОтправка уведомлений пользователям" <<Notify>> as Notification
+rectangle "Внешние системы\n\nВнешние системы" <<System_ext>> as System_ext
 
-Users .[#8D8D8D,thickness=2].> SystemFront
+Users .[#8D8D8D,thickness=2].> SystemLoadBalancer : <color:#8D8D8D>[...]
+SystemLoadBalancer .[#8D8D8D,thickness=2].> SystemFront
+SystemMonitoring .[#8D8D8D,thickness=2].> SystemLoadBalancer : <color:#8D8D8D>[...]
 SystemFront .[#8D8D8D,thickness=2].> SystemApiGateway
-SystemMonitoring .[#8D8D8D,thickness=2].> SystemFront
-SystemApiGateway .[#8D8D8D,thickness=2].> SystemIam
+SystemMonitoring .[#8D8D8D,thickness=2].> SystemFront : <color:#8D8D8D>[...]
+SystemApiGateway .[#8D8D8D,thickness=2].> SystemIam : <color:#8D8D8D>Валидация JWT и проверка прав
 SystemApiGateway .[#8D8D8D,thickness=2].> SystemBackend
-SystemMonitoring .[#8D8D8D,thickness=2].> SystemApiGateway
-SystemMonitoring .[#8D8D8D,thickness=2].> SystemIam
-SystemBackend .[#8D8D8D,thickness=2].> SystemStorage
-SystemMonitoring .[#8D8D8D,thickness=2].> SystemBackend
-SystemMonitoring .[#8D8D8D,thickness=2].> SystemStorage
-SystemApiGateway .[#8D8D8D,thickness=2].> Iam_ext
-SystemBackend .[#8D8D8D,thickness=2].> Payment
-SystemBackend .[#8D8D8D,thickness=2].> Notification
+SystemMonitoring .[#8D8D8D,thickness=2].> SystemApiGateway : <color:#8D8D8D>[...]
+SystemMonitoring .[#8D8D8D,thickness=2].> SystemIam : <color:#8D8D8D>[...]
+SystemBackend .[#8D8D8D,thickness=2].> SystemStorage : <color:#8D8D8D>Чтение и запись данных
+SystemMonitoring .[#8D8D8D,thickness=2].> SystemBackend : <color:#8D8D8D>[...]
+SystemMonitoring .[#8D8D8D,thickness=2].> SystemStorage : <color:#8D8D8D>[...]
+SystemApiGateway .[#8D8D8D,thickness=2].> System_ext : <color:#8D8D8D>Проверка токенов и синхронизация \n<color:#8D8D8D>пользователей
+SystemBackend .[#8D8D8D,thickness=2].> System_ext : <color:#8D8D8D>[...]
 @enduml

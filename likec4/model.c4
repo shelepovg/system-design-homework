@@ -1,21 +1,37 @@
 model{
-    users = system_ext "Пользователи"{
-        summary 'Пользователи системы'
-        style {
-            shape person
-            icon: bootstrap:person
+    // Клиенты системы: веб (браузер) и мобильные приложения
+    users = system "Пользователи" {
+        summary 'Клиенты: веб-браузер, Android, iOS'
+
+        web = container "Web (браузер)" {
+            summary 'Подключение по браузеру'
+            technology 'HTTP/1.1, HTTP/2'
+        }
+        android = container "Android" {
+            summary 'Мобильное приложение'
+            technology 'HTTP/1.1, HTTP/2, WebSocket'
+        }
+        ios = container "iOS" {
+            summary 'Мобильное приложение'
+            technology 'HTTP/1.1, HTTP/2, WebSocket'
         }
     }
     system = system 'Система'{
         summary 'Система обработки пользовательских запросов'
 
+        // Единая точка входа: балансировка, TLS, маршрутизация трафика
+        load-balancer = container {
+            summary 'Единая точка входа: распределение трафика, TLS termination'
+            technology '[Nginx]'
+            icon aws:elastic-load-balancing
+        }
         front = user_interface {
             summary 'Веб-интерфейс для взаимодействия с системой'
             technology '[React]'
         }
         api-gateway = container {
-            summary 'Обработка входящих запросов, маршрутизация, аутентификация и авторизация'
-            technology 'Sping Cloud Gateway'
+            summary 'Маршрутизация API, аутентификация, авторизация, rate limiting'
+            technology 'Spring Cloud Gateway'
             icon aws:api-gateway
         }
         iam = system {
@@ -41,28 +57,84 @@ model{
                 icon tech:postgresql
             }
         }    
-        monitoring = system 'Система мониторинга'{
-            summary 'Мониторинг состояния системы'
+        monitoring = system 'Система мониторинга' {
+            summary 'Сбор логов и метрик, обработка, хранение, дашборды и алертинг'
             icon bootstrap:grip-horizontal
 
-        }   
-        
+            // ---- Логи: сбор → Kafka → обработка → хранение → представление ----
+            log-collector = container 'Сбор логов' {
+                summary 'Агенты на узлах: сбор и пересылка логов с сервисов'
+                technology '[Fluent Bit]'
+                // icon tech:fluentbit
+            }
+            log-bus = queue 'Шина логов' {
+                summary 'Буфер и поток логов, сглаживание пиков'
+                technology '[Apache Kafka]'
+                icon tech:kafka
+            }
+            log-processor = container 'Обработка логов' {
+                summary 'Парсинг, обогащение, маршрутизация, маскирование PII'
+                technology '[Vector]'
+                icon tech:vector
+            }
+            log-storage = container 'Хранилище логов' {
+                summary 'Индексация и хранение (hot/warm/cold)'
+                technology '[Elasticsearch]'
+                icon tech:elasticsearch
+            }
+            log-ui = container 'Представление логов, дашборды и анализ' {
+                summary 'Поиск, фильтрация, просмотр логов для операторов и разработчиков'
+                technology '[Grafana]'
+                icon tech:grafana
+            }
+
+            // ---- Метрики: сбор → хранение → анализ → представление и алерты ----
+            metrics-collector = container 'Сбор метрик' {
+                summary 'Скрейпинг и приём метрик с сервисов и инфраструктуры'
+                technology '[Prometheus / OpenTelemetry Collector]'
+                icon tech:prometheus
+            }
+            metrics-storage = container 'Хранилище метрик' {
+                summary 'Временные ряды, retention (real-time / 7 дней / 90 дней)'
+                technology 'Prometheus TSDB / VictoriaMetrics'
+                // icon tech:victoriametrics
+            }
+            alerting = container 'Алертинг' {
+                summary 'Правила алертов, группировка, уведомления (PagerDuty, Slack, Email)'
+                technology '[Grafana Alerting]'
+            }
+        }
+
+    }
+    system_ext = system_ext 'Внешние системы'{
+        summary 'Внешние системы'
+        iam_ext = system_ext "IAM"{
+            summary 'Внешняя система аутентификации'
+            technology '[OAuth2]'
+        }
+        payment = system_ext 'Платежная система'{
+            summary 'Обработка платежей'
+        }
+        notification = system_ext 'Уведомления'{
+            summary 'Отправка уведомлений пользователям'
+        }
     }
 
-    iam_ext = system_ext "IAM"{
-        summary 'Внешняя система аутентификации'
-        technology '[OAuth2]'
-    }
-    payment = system_ext 'Платежная система'{
-        summary 'Обработка платежей'
-    }
-    notification = system_ext 'Уведомления'{
-        summary 'Отправка уведомлений пользователям'
-    }
+
 
 
     // ==== relations ====
-    users -> front {
+    // Клиенты подключаются к системе синхронно (протоколы в подписи)
+    web -> load-balancer 'Загрузка веб-интерфейса и API-запросы (HTTP/1.1, HTTP/2)' {
+        #sync
+    }
+    android -> load-balancer 'API-запросы и уведомления в реальном времени (HTTP/1.1, HTTP/2, WebSocket)' {
+        #sync
+    }
+    ios -> load-balancer 'API-запросы и уведомления в реальном времени (HTTP/1.1, HTTP/2, WebSocket)' {
+        #sync
+    }
+    load-balancer -> front {
         #sync
     }
     front -> api-gateway {
@@ -71,26 +143,59 @@ model{
     api-gateway -> backend {
         #sync
     }
-    api-gateway -> iam {
+    api-gateway -> iam 'Валидация JWT и проверка прав' 'OAuth 2.0, OIDC, JWT (HTTPS)' {
         #sync
     }
-    api-gateway -> iam_ext{
+    api-gateway -> iam_ext 'Проверка токенов и синхронизация пользователей' 'OAuth 2.0, OpenID Connect (HTTPS)' {
         #sync
     }
-    backend -> database {
+    backend -> database 'Чтение и запись данных' 'JDBC, SQL (TCP)' {
         #sync
     }
-    backend -> payment {
+    backend -> payment 'Инициация платежа, получение статусов по Webhook' 'REST API (HTTPS), Webhook' {
         #sync
     }
-    backend -> notification {
+    backend -> notification 'Отправка уведомлений (SMS, email, push), статусы доставки' 'REST API (HTTPS), SMTP' {
         #async
     }
-    monitoring -> front
-    monitoring -> api-gateway
-    monitoring -> backend
-    monitoring -> database
-    monitoring -> iam
+    // Мониторинг: сбор логов с компонентов. Технология: Fluent Bit (file tail на узле или приём Fluent Forward). Протокол/порт: Forward TCP 24224 или чтение файлов (same host).
+    monitoring.log-collector -> load-balancer 'Сбор access/error логов Nginx' 'Fluent Bit; file tail / Forward; TCP 24224'
+    monitoring.log-collector -> front 'Сбор логов веб-сервера и SPA' 'Fluent Bit; file tail / Forward; TCP 24224'
+    monitoring.log-collector -> api-gateway 'Сбор логов шлюза (запросы, ошибки)' 'Fluent Bit; file tail / Forward; TCP 24224'
+    monitoring.log-collector -> backend 'Сбор логов микросервисов' 'Fluent Bit; file tail / Forward; TCP 24224'
+    monitoring.log-collector -> database 'Сбор логов PostgreSQL' 'Fluent Bit; file tail / Forward; TCP 24224'
+    monitoring.log-collector -> iam 'Сбор логов Keycloak/IAM' 'Fluent Bit; file tail / Forward; TCP 24224'
 
+    // Мониторинг: сбор метрик. Prometheus скрейпит /metrics по HTTP. Порты: экспортеры или management port приложений.
+    monitoring.metrics-collector -> load-balancer 'Скрейпинг метрик Nginx' 'Prometheus; HTTP GET /metrics; TCP 9113 (nginx-exporter)'
+    monitoring.metrics-collector -> front 'Сбор метрик веб-сервера' 'Prometheus; HTTP GET /metrics; TCP 8080'
+    monitoring.metrics-collector -> api-gateway 'Скрейпинг метрик шлюза' 'Prometheus; HTTP GET /actuator/prometheus; TCP 8080'
+    monitoring.metrics-collector -> backend 'Скрейпинг метрик микросервисов' 'Prometheus; HTTP GET /actuator/prometheus; TCP 8080'
+    monitoring.metrics-collector -> database 'Сбор метрик PostgreSQL' 'Prometheus; HTTP GET /metrics; TCP 9187 (postgres_exporter)'
+    monitoring.metrics-collector -> iam 'Сбор метрик Keycloak/IAM' 'Prometheus; HTTP GET /metrics; TCP 9090'
 
+    // ---- Внутри системы мониторинга: поток логов ----
+    log-collector -> log-bus 'Пересылка логов' {
+        #async
+    }
+    log-bus -> log-processor 'Чтение из топиков' {
+        #async
+    }
+    log-processor -> log-storage 'Индексация и запись' {
+        #sync
+    }
+    log-storage -> log-ui 'Запросы поиска и выборок' {
+        #sync
+    }
+
+    // ---- Внутри системы мониторинга: поток метрик ----
+    metrics-collector -> metrics-storage 'Скрейпинг и запись метрик' {
+        #sync
+    }
+    metrics-storage -> log-ui 'Запросы к временным рядам (PromQL)' {
+        #sync
+    }
+    metrics-storage -> alerting 'Вычисление правил алертов' {
+        #sync
+    }
 }

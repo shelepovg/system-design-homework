@@ -1,0 +1,50 @@
+@startuml
+title "Контейнерная диаграмма"
+top to bottom direction
+
+hide stereotype
+skinparam ranksep 60
+skinparam nodesep 30
+skinparam {
+  arrowFontSize 10
+  defaultTextAlignment center
+  wrapWidth 200
+  maxMessageSize 100
+  shadowing false
+}
+
+skinparam rectangle<<System>>{
+  BackgroundColor #2b85e7
+  FontColor #f1ffff
+  BorderColor #1e73ce
+}
+skinparam rectangle<<System_extIam_ext>>{
+  BackgroundColor #827a8e
+  FontColor #ffffff
+  BorderColor #6c6477
+}
+skinparam rectangle<<System_extPayment>>{
+  BackgroundColor #827a8e
+  FontColor #ffffff
+  BorderColor #6c6477
+}
+skinparam rectangle<<System_extNotification>>{
+  BackgroundColor #827a8e
+  FontColor #ffffff
+  BorderColor #6c6477
+}
+rectangle "Система\n\nСистема обработки пользовательских запросов" <<System>> as System
+rectangle "Внешние системы" <<System_ext>> as System_ext {
+  skinparam RectangleBorderColor<<System_ext>> #827a8e
+  skinparam RectangleFontColor<<System_ext>> #827a8e
+  skinparam RectangleBorderStyle<<System_ext>> dashed
+
+  rectangle "IAM\n<size:10>[[OAuth2]]</size>\n\nВнешняя система аутентификации" <<System_extIam_ext>> as System_extIam_ext
+  rectangle "Платежная система\n\nОбработка платежей" <<System_extPayment>> as System_extPayment
+  rectangle "Уведомления\n\nОтправка уведомлений пользователям" <<System_extNotification>> as System_extNotification
+}
+
+System .[#8D8D8D,thickness=2].> System_extIam_ext : <color:#8D8D8D>Проверка токенов и синхронизация \n<color:#8D8D8D>пользователей
+System .[#8D8D8D,thickness=2].> System_extPayment : <color:#8D8D8D>Инициация платежа, получение статусов по \n<color:#8D8D8D>Webhook
+System .[#8D8D8D,thickness=2].> System_extNotification : <color:#8D8D8D>Отправка уведомлений (SMS, email, push), \n<color:#8D8D8D>статусы доставки
+@enduml
