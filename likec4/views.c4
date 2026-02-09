@@ -27,7 +27,7 @@ views {
                 system
     }
 
-    view monitoring_container of system {
+    view monitoring_container of system.monitoring {
         title 'System/Система мониторинга/Контейрная диаграмма'
         description 'Логи: сбор → Kafka → обработка → хранение → представление. Метрики: сбор → хранение → дашборды и алертинг'
 
