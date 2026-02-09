@@ -3,7 +3,13 @@ name: Deploy LikeC4 to GitHub Pages
 on:
   push:
     branches:
-      - feature/hw-2
+      - main
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Ветка для сборки и деплоя (пусто = текущая при push)'
+        required: false
+        default: 'main'
 
 permissions:
   contents: read
@@ -21,6 +27,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
