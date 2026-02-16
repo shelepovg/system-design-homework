@@ -1,1 +1,72 @@
 === Схема взаимодействия
+
+Описание протоколов и способов взаимодействия между компонентами решения. Детализация форматов — в документе 2.12.
+
+==== Взаимодействие через API Gateway (синхронное)
+
+*Клиенты → Load Balancer → Frontend / API Gateway:*
+  * Протокол: HTTPS (TLS 1.3), HTTP/1.1 и HTTP/2; мобильные клиенты дополнительно WebSocket (уведомления в реальном времени).
+  * Формат: REST API (JSON), статика — HTML/CSS/JS.
+  * Порт: 443 (HTTPS), 80 — редирект на 443.
+
+*API Gateway → Backend (микросервисы):*
+  * Маршрутизация по пути и заголовкам (например, /api/users → User Service, /api/requests → Request Processing Service, /api/payments → Payment Service).
+  * Протокол: HTTP/1.1 или HTTP/2 (внутренняя сеть), TLS опционально внутри периметра.
+  * Формат: JSON (REST), заголовки: X-User-Id, X-Request-Id, X-Trace-Id (сквозная трассировка).
+  * Тип: синхронный запрос-ответ; таймаут и retry настраиваются на уровне Gateway и клиента.
+
+*API Gateway → IAM (внутренний Keycloak):*
+  * Протокол: HTTPS, OAuth 2.0 / OpenID Connect.
+  * Взаимодействие: валидация JWT (introspection или локальная проверка подписи с кэшем JWKS), обмен токенами при логине/refresh.
+  * Формат: JWT (access/refresh), JWKS (JSON).
+
+*API Gateway → IAM внешний:*
+  * Протокол: HTTPS, OAuth 2.0, OpenID Connect.
+  * Синхронные вызовы при логине и при необходимости проверки токена; кэширование результата для снижения нагрузки.
+
+==== Взаимодействие между микросервисами (Backend)
+
+*Синхронное (запрос-ответ):*
+  * User Service, Request Processing Service, Payment Service, Notification Service (REST API для вызовов от Gateway и при необходимости сервис-сервис): HTTP/1.1 или HTTP/2, JSON.
+  * При необходимости низкой задержки между сервисами: gRPC (Protocol Buffers) по отдельным договорённостям; по умолчанию — REST поверх HTTP.
+
+*Синхронное обращение к данным:*
+  * Все микросервисы → PostgreSQL (своя БД по паттерну Database per Service): протокол TCP, JDBC; формат — SQL, передача данных по драйверу.
+  * Микросервисы → Redis (кэш): протокол TCP, Redis Protocol (RESP); операции GET/SET/INVALIDATE по ключам (Cache-Aside, Write-Through где задано).
+
+*Асинхронное (события):*
+  * Payment Service, Request Processing Service, др. → Event Bus (Kafka): протокол Kafka Protocol (TCP); публикация в топики (например, payment.events, notification.requests, audit.events).
+  * Notification Service, Audit Service и др. ← Event Bus: потребление из топиков (consumer groups); доставка at-least-once, идемпотентная обработка на стороне потребителя.
+  * Формат сообщений: JSON или Avro/Protobuf для схемы (см. 2.12).
+
+==== Взаимодействие с внешними системами
+
+*Backend → Платёжная система:*
+  * Синхронно: REST API (HTTPS), JSON; инициация платежа, получение статуса по idempotency key.
+  * Асинхронно: приём webhook (HTTPS, входящий вызов от провайдера), JSON body; проверка подписи/секрета.
+
+*Backend → Система уведомлений:*
+  * Синхронно или асинхронно: REST API (HTTPS), JSON; отправка шаблонов.
+  * Email: SMTP или API провайдера (HTTPS).
+
+==== Сводная таблица: протоколы и типы взаимодействия
+
+[options="header",cols="2,2,2,2"]
+|===
+| От кого → Кому | Протокол | Формат | Тип
+| Клиенты → LB | HTTPS (HTTP/1.1, HTTP/2), WebSocket | REST/JSON, статика | Синхронный
+| API Gateway → User Service | HTTP/2 | JSON (REST) | Синхронный
+| API Gateway → Request Processing Service | HTTP/2 | JSON (REST) | Синхронный
+| API Gateway → Payment Service | HTTP/2 | JSON (REST) | Синхронный
+| API Gateway → Notification Service | HTTP/2 | JSON (REST) | Синхронный
+| API Gateway → IAM | HTTPS, OAuth2/OIDC | JWT, JWKS | Синхронный
+| Микросервисы → PostgreSQL | TCP (JDBC) | SQL | Синхронный
+| Микросервисы → Redis | TCP (RESP) | Команды Redis, значения (сериализация) | Синхронный
+| Микросервисы → Kafka (Event Bus) | Kafka Protocol (TCP) | JSON / Avro (сообщения) | Асинхронный
+| Payment Service → Платёжная система | HTTPS | JSON (REST) | Синхронный + Webhook (входящий)
+| Notification Service → Уведомления (Email/SMS) | HTTPS, SMTP | JSON, MIME | Синхронный/асинхронный
+|===
+
+==== Схема взаимодействия микросервисов (концепт)
+
+Запрос пользователя обрабатывается так: API Gateway маршрутизирует вызов на один из микросервисов (User, Request Processing, Payment, Notification — по пути API). Микросервис при необходимости читает/пишет в свою БД и кэш (Redis); для уведомлений и аудита публикует события в Kafka. Notification Service и Audit Service подписаны на топики и обрабатывают сообщения асинхронно; Payment Service инициирует платёж синхронно с провайдером и публикует результат в Event Bus для уведомлений. Визуальная схема контейнеров и связей — в LikeC4 (вид «Обработка пользовательских запросов», контейнерная диаграмма backend).
