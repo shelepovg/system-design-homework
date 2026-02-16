@@ -24,7 +24,7 @@ specification {
     style {
       color color_software-system
       shape rectangle
-      opacity 30%
+      opacity 10%
 
     }
   }

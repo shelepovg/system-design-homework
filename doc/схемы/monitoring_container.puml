@@ -1,0 +1,137 @@
+@startuml
+title "Контейрная диаграмма"
+top to bottom direction
+
+hide stereotype
+skinparam ranksep 60
+skinparam nodesep 30
+skinparam {
+  arrowFontSize 10
+  defaultTextAlignment center
+  wrapWidth 200
+  maxMessageSize 100
+  shadowing false
+}
+
+skinparam rectangle<<SystemMonitoringLogCollector>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemMonitoringMetricsCollector>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam queue<<SystemMonitoringLogBus>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemMonitoringMetricsStorage>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemLoadBalancer>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemMonitoringLogProcessor>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemMonitoringAlerting>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemFront>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemMonitoringLogStorage>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemApiGateway>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemMonitoringLogUi>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemIam>>{
+  BackgroundColor #2b85e7
+  FontColor #f1ffff
+  BorderColor #1e73ce
+}
+skinparam rectangle<<SystemBackend>>{
+  BackgroundColor #2b85e7
+  FontColor #f1ffff
+  BorderColor #1e73ce
+}
+skinparam rectangle<<SystemStorage>>{
+  BackgroundColor #2b85e7
+  FontColor #f1ffff
+  BorderColor #1e73ce
+}
+rectangle "Система" <<System>> as System {
+  skinparam RectangleBorderColor<<System>> #2b85e7
+  skinparam RectangleFontColor<<System>> #2b85e7
+  skinparam RectangleBorderStyle<<System>> dashed
+
+  rectangle "Система мониторинга" <<SystemMonitoring>> as SystemMonitoring {
+    skinparam RectangleBorderColor<<SystemMonitoring>> #2b85e7
+    skinparam RectangleFontColor<<SystemMonitoring>> #2b85e7
+    skinparam RectangleBorderStyle<<SystemMonitoring>> dashed
+
+    rectangle "Сбор логов\n<size:10>[[Fluent Bit]]</size>\n\nАгенты на узлах: сбор и пересылка логов с сервисов" <<SystemMonitoringLogCollector>> as SystemMonitoringLogCollector
+    rectangle "Сбор метрик\n<size:10>[[Prometheus / OpenTelemetry Collector]]</size>\n\nСкрейпинг и приём метрик с сервисов и инфраструктуры" <<SystemMonitoringMetricsCollector>> as SystemMonitoringMetricsCollector
+    queue "Шина логов\n<size:10>[[Apache Kafka]]</size>\n\nБуфер и поток логов, сглаживание пиков" <<SystemMonitoringLogBus>> as SystemMonitoringLogBus
+    rectangle "Хранилище метрик\n<size:10>[Prometheus TSDB / VictoriaMetrics]</size>\n\nВременные ряды, retention (real-time / 7 дней / 90 дней)" <<SystemMonitoringMetricsStorage>> as SystemMonitoringMetricsStorage
+    rectangle "Обработка логов\n<size:10>[[Vector]]</size>\n\nПарсинг, обогащение, маршрутизация, маскирование PII" <<SystemMonitoringLogProcessor>> as SystemMonitoringLogProcessor
+    rectangle "Алертинг\n<size:10>[[Grafana Alerting]]</size>\n\nПравила алертов, группировка, уведомления (PagerDuty, Slack, Email)" <<SystemMonitoringAlerting>> as SystemMonitoringAlerting
+    rectangle "Хранилище логов\n<size:10>[[Elasticsearch]]</size>\n\nИндексация и хранение (hot/warm/cold)" <<SystemMonitoringLogStorage>> as SystemMonitoringLogStorage
+    rectangle "Представление логов, дашборды и анализ\n<size:10>[[Grafana]]</size>\n\nПоиск, фильтрация, просмотр логов для операторов и разработчиков" <<SystemMonitoringLogUi>> as SystemMonitoringLogUi
+  }
+  rectangle "load-balancer\n<size:10>[[Nginx]]</size>\n\nЕдиная точка входа: распределение трафика, TLS termination" <<SystemLoadBalancer>> as SystemLoadBalancer
+  rectangle "front\n<size:10>[[React]]</size>\n\nВеб-интерфейс для взаимодействия с системой" <<SystemFront>> as SystemFront
+  rectangle "api-gateway\n<size:10>[Spring Cloud Gateway]</size>\n\nМаршрутизация API, аутентификация, авторизация, rate limiting" <<SystemApiGateway>> as SystemApiGateway
+  rectangle "iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management" <<SystemIam>> as SystemIam
+  rectangle "Обработка пользовательских запросов\n<size:10>[[Spring]]</size>\n\nСистема обработки бизнес-логики" <<SystemBackend>> as SystemBackend
+  rectangle "Хранение данных\n\nХранение данных пользователя" <<SystemStorage>> as SystemStorage
+}
+
+SystemMonitoringLogCollector .[#8D8D8D,thickness=2].> SystemMonitoringLogBus : <color:#8D8D8D>Пересылка логов
+SystemMonitoringLogBus .[#8D8D8D,thickness=2].> SystemMonitoringLogProcessor : <color:#8D8D8D>Чтение из топиков
+SystemMonitoringLogProcessor .[#8D8D8D,thickness=2].> SystemMonitoringLogStorage : <color:#8D8D8D>Индексация и запись
+SystemMonitoringLogStorage .[#8D8D8D,thickness=2].> SystemMonitoringLogUi : <color:#8D8D8D>Запросы поиска и выборок
+SystemMonitoringMetricsStorage .[#8D8D8D,thickness=2].> SystemMonitoringLogUi : <color:#8D8D8D>Запросы к временным рядам (PromQL)
+SystemMonitoringMetricsCollector .[#8D8D8D,thickness=2].> SystemMonitoringMetricsStorage : <color:#8D8D8D>Скрейпинг и запись метрик
+SystemMonitoringMetricsStorage .[#8D8D8D,thickness=2].> SystemMonitoringAlerting : <color:#8D8D8D>Вычисление правил алертов
+SystemMonitoringLogCollector .[#8D8D8D,thickness=2].> SystemLoadBalancer : <color:#8D8D8D>Сбор access/error логов Nginx
+SystemMonitoringLogCollector .[#8D8D8D,thickness=2].> SystemFront : <color:#8D8D8D>Сбор логов веб-сервера и SPA
+SystemMonitoringLogCollector .[#8D8D8D,thickness=2].> SystemApiGateway : <color:#8D8D8D>Сбор логов шлюза (запросы, ошибки)
+SystemMonitoringLogCollector .[#8D8D8D,thickness=2].> SystemIam : <color:#8D8D8D>Сбор логов Keycloak/IAM
+SystemMonitoringLogCollector .[#8D8D8D,thickness=2].> SystemBackend : <color:#8D8D8D>Сбор логов микросервисов
+SystemMonitoringLogCollector .[#8D8D8D,thickness=2].> SystemStorage : <color:#8D8D8D>Сбор логов PostgreSQL
+SystemMonitoringMetricsCollector .[#8D8D8D,thickness=2].> SystemLoadBalancer : <color:#8D8D8D>Скрейпинг метрик Nginx
+SystemMonitoringMetricsCollector .[#8D8D8D,thickness=2].> SystemFront : <color:#8D8D8D>Сбор метрик веб-сервера
+SystemMonitoringMetricsCollector .[#8D8D8D,thickness=2].> SystemApiGateway : <color:#8D8D8D>Скрейпинг метрик шлюза
+SystemMonitoringMetricsCollector .[#8D8D8D,thickness=2].> SystemIam : <color:#8D8D8D>Сбор метрик Keycloak/IAM
+SystemMonitoringMetricsCollector .[#8D8D8D,thickness=2].> SystemBackend : <color:#8D8D8D>Скрейпинг метрик микросервисов
+SystemMonitoringMetricsCollector .[#8D8D8D,thickness=2].> SystemStorage : <color:#8D8D8D>Сбор метрик PostgreSQL
+SystemLoadBalancer .[#8D8D8D,thickness=2].> SystemFront
+SystemFront .[#8D8D8D,thickness=2].> SystemApiGateway
+SystemApiGateway .[#8D8D8D,thickness=2].> SystemIam : <color:#8D8D8D>Валидация JWT и проверка прав
+SystemApiGateway .[#8D8D8D,thickness=2].> SystemBackend
+SystemBackend .[#8D8D8D,thickness=2].> SystemStorage : <color:#8D8D8D>Чтение и запись данных
+@enduml

@@ -1,13 +1,40 @@
 views {
     view context of system {
-        title 'Контекстная диаграмма'
+        title 'System/Контекстная диаграмма'
         description 'Диаграмма контекста системы'
-        
+
         include users,
                 system,
                 system.*,
-                iam_ext,
-                payment,
-                notification
+                system_ext
+                }
+
+    view user_container of users {
+        title 'users/Контейнерная диаграмма'
+        description 'Подробно описывает набор пользователей'
+
+        include users,
+                users.*,
+                system
+    }
+
+    view external_system_container of system_ext {
+        title 'system_ext/Контейнерная диаграмма'
+        description 'Подробная диаграмма внешних систем'
+
+        include system_ext,
+                system_ext.*,
+                system
+    }
+
+    view monitoring_container of system.monitoring {
+        title 'System/Система мониторинга/Контейрная диаграмма'
+        description 'Логи: сбор → Kafka → обработка → хранение → представление. Метрики: сбор → хранение → дашборды и алертинг'
+
+        include system,
+                monitoring,
+                monitoring.*,
+                system.*
+                // system.*
     }
 }

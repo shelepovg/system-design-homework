@@ -1,0 +1,50 @@
+@startuml
+title "Контейнерная диаграмма"
+top to bottom direction
+
+hide stereotype
+skinparam ranksep 60
+skinparam nodesep 30
+skinparam {
+  arrowFontSize 10
+  defaultTextAlignment center
+  wrapWidth 200
+  maxMessageSize 100
+  shadowing false
+}
+
+skinparam rectangle<<UsersWeb>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<UsersAndroid>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<UsersIos>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<System>>{
+  BackgroundColor #2b85e7
+  FontColor #f1ffff
+  BorderColor #1e73ce
+}
+rectangle "Пользователи" <<Users>> as Users {
+  skinparam RectangleBorderColor<<Users>> #2b85e7
+  skinparam RectangleFontColor<<Users>> #2b85e7
+  skinparam RectangleBorderStyle<<Users>> dashed
+
+  rectangle "Web (браузер)\n<size:10>[HTTP/1.1, HTTP/2]</size>\n\nПодключение по браузеру" <<UsersWeb>> as UsersWeb
+  rectangle "Android\n<size:10>[HTTP/1.1, HTTP/2, WebSocket]</size>\n\nМобильное приложение" <<UsersAndroid>> as UsersAndroid
+  rectangle "iOS\n<size:10>[HTTP/1.1, HTTP/2, WebSocket]</size>\n\nМобильное приложение" <<UsersIos>> as UsersIos
+}
+rectangle "Система\n\nСистема обработки пользовательских запросов" <<System>> as System
+
+UsersWeb .[#8D8D8D,thickness=2].> System : <color:#8D8D8D>Загрузка веб-интерфейса и API-запросы \n<color:#8D8D8D>(HTTP/1.1, HTTP/2)
+UsersAndroid .[#8D8D8D,thickness=2].> System : <color:#8D8D8D>API-запросы и уведомления в реальном \n<color:#8D8D8D>времени (HTTP/1.1, HTTP/2, WebSocket)
+UsersIos .[#8D8D8D,thickness=2].> System : <color:#8D8D8D>API-запросы и уведомления в реальном \n<color:#8D8D8D>времени (HTTP/1.1, HTTP/2, WebSocket)
+@enduml

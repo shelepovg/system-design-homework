@@ -1,0 +1,37 @@
+@startuml
+title "Landscape view"
+top to bottom direction
+
+hide stereotype
+skinparam ranksep 60
+skinparam nodesep 30
+skinparam {
+  arrowFontSize 10
+  defaultTextAlignment center
+  wrapWidth 200
+  maxMessageSize 100
+  shadowing false
+}
+
+skinparam rectangle<<Users>>{
+  BackgroundColor #2b85e7
+  FontColor #f1ffff
+  BorderColor #1e73ce
+}
+skinparam rectangle<<System>>{
+  BackgroundColor #2b85e7
+  FontColor #f1ffff
+  BorderColor #1e73ce
+}
+skinparam rectangle<<System_ext>>{
+  BackgroundColor #827a8e
+  FontColor #ffffff
+  BorderColor #6c6477
+}
+rectangle "Пользователи\n\nКлиенты: веб-браузер, Android, iOS" <<Users>> as Users
+rectangle "Система\n\nСистема обработки пользовательских запросов" <<System>> as System
+rectangle "Внешние системы\n\nВнешние системы" <<System_ext>> as System_ext
+
+Users .[#8D8D8D,thickness=2].> System : <color:#8D8D8D>[...]
+System .[#8D8D8D,thickness=2].> System_ext : <color:#8D8D8D>[...]
+@enduml
