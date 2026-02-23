@@ -92,6 +92,24 @@ Client (Web / Android / iOS)
   * Синхронно или асинхронно: REST API (HTTPS), JSON; отправка шаблонов.
   * Email: SMTP или API провайдера (HTTPS).
 
+==== Схемы взаимодействия (OpenAPI / Swagger)
+
+Описание ключевых API в формате OpenAPI 3.0 (Swagger) — единая точка входа API Gateway и маршрутизация к микросервисам. Спецификация содержит характерные endpoint'ы и схемы данных, связанные с общей моделью данных (документ 2.06).
+
+*Расположение и использование:*
+  * Файл: `openapi/api-gateway.yaml`.
+  * Пути: `/api/v1/users`, `/api/v1/requests`, `/api/v1/payments`, `/api/v1/notifications` — соответствуют маршрутам Gateway → User Service, Request Processing Service, Payment Service, Notification Service.
+  * Схемы (components/schemas) ссылаются на сущности модели данных: `user_id` (users.user_id), `request_id` (user_requests.request_id), `transaction_id` (payment_transactions.transaction_id), `notification_id` (notifications.notification_id).
+  * Все описанные вызовы — *синхронные* (sync): запрос от клиента → ответ по тому же соединению. Асинхронные потоки (Event Bus, webhook) в OpenAPI не описываются; они заданы в документе 2.12 и на схеме потока выше.
+
+*Ключевые операции по сервисам:*
+  * *User Service:* GET/PATCH `/users/me` (профиль), GET `/users/me/sessions` (сессии).
+  * *Request Processing Service:* GET/POST `/requests`, GET `/requests/{request_id}`.
+  * *Payment Service:* POST `/payments/transactions` (инициация платежа), GET `/payments/transactions/{transaction_id}`.
+  * *Notification Service:* GET `/notifications`, GET/PATCH `/notifications/preferences`.
+
+Полная проработка всех операций и кодов ошибок не требуется для архитектурного описания; при необходимости спецификацию расширяют в рамках разработки.
+
 ==== Сводная таблица: протоколы и типы взаимодействия
 
 [options="header",cols="2,2,2,2"]

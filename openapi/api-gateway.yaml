@@ -1,0 +1,376 @@
+openapi: 3.0.3
+info:
+  title: API Gateway — Система обработки пользовательских запросов
+  description: |
+    Единая точка входа для клиентов. Маршрутизация по путям к микросервисам:
+    - /api/v1/users → User Service
+    - /api/v1/requests → Request Processing Service
+    - /api/v1/payments → Payment Service
+    - /api/v1/notifications → Notification Service
+
+    Связь с моделью данных: см. документ 2.06 (идентификаторы user_id, request_id, transaction_id, notification_id).
+    Типы взаимодействия: sync (запрос-ответ) — см. документ 2.11.
+  version: 1.0.0
+  contact:
+    name: Команда разработки
+
+servers:
+  - url: https://api.example.com/api/v1
+    description: Production
+
+tags:
+  - name: users
+    description: Профиль, сессии, роли (User Service)
+  - name: requests
+    description: Запросы пользователей (Request Processing Service)
+  - name: payments
+    description: Платежи (Payment Service)
+  - name: notifications
+    description: Уведомления и настройки (Notification Service)
+
+security:
+  - bearerAuth: []
+
+paths:
+  # --- User Service (модель: users, user_roles, user_sessions — 2.06) ---
+  /users/me:
+    get:
+      summary: Текущий пользователь (профиль)
+      tags: [users]
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Профиль пользователя
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      summary: Обновить профиль
+      tags: [users]
+      operationId: updateCurrentUser
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserUpdate' }
+      responses:
+        '200':
+          description: Обновлённый профиль
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /users/me/sessions:
+    get:
+      summary: Список активных сессий
+      tags: [users]
+      operationId: listMySessions
+      responses:
+        '200':
+          description: Список сессий
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Session' } }
+                  total: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # --- Request Processing Service (модель: user_requests — 2.06) ---
+  /requests:
+    get:
+      summary: Список запросов пользователя
+      tags: [requests]
+      operationId: listRequests
+      parameters:
+        - $ref: '#/components/parameters/status'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Список запросов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/UserRequest' } }
+                  total: { type: integer }
+                  offset: { type: integer }
+                  limit: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      summary: Создать запрос (PROCESS_DATA, GENERATE_REPORT, EXPORT_DATA, MANAGE_RESOURCES)
+      tags: [requests]
+      operationId: createRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRequest' }
+      responses:
+        '201':
+          description: Запрос создан
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserRequest' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /requests/{request_id}:
+    get:
+      summary: Получить запрос по ID
+      tags: [requests]
+      operationId: getRequest
+      parameters:
+        - $ref: '#/components/parameters/request_id'
+      responses:
+        '200':
+          description: Запрос
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # --- Payment Service (модель: payment_transactions — 2.06) ---
+  /payments/transactions:
+    post:
+      summary: Инициация платежа
+      tags: [payments]
+      operationId: createTransaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTransaction' }
+      responses:
+        '201':
+          description: Транзакция создана
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Transaction' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /payments/transactions/{transaction_id}:
+    get:
+      summary: Статус транзакции
+      tags: [payments]
+      operationId: getTransaction
+      parameters:
+        - $ref: '#/components/parameters/transaction_id'
+      responses:
+        '200':
+          description: Транзакция
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Transaction' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # --- Notification Service (модель: notifications, notification_templates — 2.06) ---
+  /notifications:
+    get:
+      summary: Список уведомлений пользователя
+      tags: [notifications]
+      operationId: listNotifications
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Список уведомлений
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Notification' } }
+                  total: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /notifications/preferences:
+    get:
+      summary: Настройки уведомлений
+      tags: [notifications]
+      operationId: getNotificationPreferences
+      responses:
+        '200':
+          description: Настройки каналов (email, sms, push)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationPreferences' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      summary: Обновить настройки уведомлений
+      tags: [notifications]
+      operationId: updateNotificationPreferences
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotificationPreferences' }
+      responses:
+        '200': { description: OK }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token от IAM (OAuth2/OIDC)
+
+  parameters:
+    request_id:
+      name: request_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Идентификатор запроса (user_requests.request_id)
+    transaction_id:
+      name: transaction_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Идентификатор транзакции (payment_transactions.transaction_id)
+    status:
+      name: status
+      in: query
+      schema: { type: string, enum: [PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED] }
+    offset:
+      name: offset
+      in: query
+      schema: { type: integer, minimum: 0, default: 0 }
+    limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+
+  responses:
+    BadRequest:
+      description: Ошибка валидации
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Требуется аутентификация
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Ресурс не найден
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    # Связь с 2.06: users
+    User:
+      type: object
+      description: Профиль пользователя (users + роли)
+      properties:
+        user_id: { type: string, format: uuid, description: users.user_id }
+        email: { type: string, format: email }
+        username: { type: string }
+        first_name: { type: string }
+        last_name: { type: string }
+        phone: { type: string }
+        status: { type: string, enum: [ACTIVE, INACTIVE, SUSPENDED, DELETED] }
+        roles: { type: array, items: { type: string }, description: user_roles.role_name }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    UserUpdate:
+      type: object
+      properties:
+        first_name: { type: string }
+        last_name: { type: string }
+        phone: { type: string }
+    Session:
+      type: object
+      description: user_sessions (без токенов)
+      properties:
+        session_id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        ip_address: { type: string }
+        user_agent: { type: string }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        is_active: { type: boolean }
+
+    # Связь с 2.06: user_requests
+    UserRequest:
+      type: object
+      properties:
+        request_id: { type: string, format: uuid, description: user_requests.request_id }
+        user_id: { type: string, format: uuid }
+        request_type: { type: string, enum: [PROCESS_DATA, GENERATE_REPORT, EXPORT_DATA, MANAGE_RESOURCES] }
+        status: { type: string, enum: [PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED] }
+        priority: { type: integer, minimum: 1, maximum: 10 }
+        request_data: { type: object }
+        result_data: { type: object }
+        created_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time, nullable: true }
+    CreateRequest:
+      type: object
+      required: [request_type]
+      properties:
+        request_type: { type: string, enum: [PROCESS_DATA, GENERATE_REPORT, EXPORT_DATA, MANAGE_RESOURCES] }
+        priority: { type: integer, minimum: 1, maximum: 10, default: 5 }
+        request_data: { type: object }
+
+    # Связь с 2.06: payment_transactions
+    Transaction:
+      type: object
+      properties:
+        transaction_id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid, nullable: true }
+        amount: { type: number, format: double, description: Сумма (денежный тип в БД — decimal) }
+        currency: { type: string }
+        status: { type: string, enum: [PENDING, PROCESSING, COMPLETED, FAILED, REFUNDED, CANCELLED] }
+        payment_method: { type: string }
+        payment_provider: { type: string }
+        created_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time, nullable: true }
+    CreateTransaction:
+      type: object
+      required: [amount, currency, payment_method]
+      properties:
+        amount: { type: number, format: double, minimum: 0.01, description: Сумма (денежный тип в БД — decimal) }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        payment_method: { type: string, enum: [CREDIT_CARD, BANK_TRANSFER, DIGITAL_WALLET] }
+        request_id: { type: string, format: uuid }
+        description: { type: string }
+        idempotency_key: { type: string, description: Для идемпотентности вызова }
+
+    # Связь с 2.06: notifications
+    Notification:
+      type: object
+      properties:
+        notification_id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        notification_type: { type: string, enum: [EMAIL, SMS, PUSH, IN_APP] }
+        channel: { type: string }
+        subject: { type: string }
+        message: { type: string }
+        status: { type: string, enum: [PENDING, SENT, DELIVERED, FAILED, BOUNCED] }
+        created_at: { type: string, format: date-time }
+        sent_at: { type: string, format: date-time, nullable: true }
+    NotificationPreferences:
+      type: object
+      properties:
+        email_enabled: { type: boolean }
+        sms_enabled: { type: boolean }
+        push_enabled: { type: boolean }
+
+    Error:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details: { type: object }
