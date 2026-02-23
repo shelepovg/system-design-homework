@@ -44,7 +44,7 @@ rectangle "Внешние системы" <<System_ext>> as System_ext {
   rectangle "Уведомления\n\nОтправка уведомлений пользователям" <<System_extNotification>> as System_extNotification
 }
 
-System .[#8D8D8D,thickness=2].> System_extIam_ext : <color:#8D8D8D>Проверка токенов и синхронизация \n<color:#8D8D8D>пользователей
-System .[#8D8D8D,thickness=2].> System_extPayment : <color:#8D8D8D>Инициация платежа, получение статусов по \n<color:#8D8D8D>Webhook
-System .[#8D8D8D,thickness=2].> System_extNotification : <color:#8D8D8D>Отправка уведомлений (SMS, email, push), \n<color:#8D8D8D>статусы доставки
+System .[#15803d,thickness=2].> System_extIam_ext : <color:#15803d>Логин, refresh токенов, синхронизация \n<color:#15803d>пользователей\n<size:8>[<color:#15803d>HTTPS]</size>
+System .[#15803d,thickness=2].> System_extPayment : <color:#15803d>Инициация платежа; приём Webhook\n<size:8>[<color:#15803d>HTTPS]</size>
+System .[#15803d,thickness=2].> System_extNotification : <color:#15803d>Отправка (Email, SMS, Push)\n<size:8>[<color:#15803d>HTTPS]</size>
 @enduml

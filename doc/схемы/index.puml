@@ -32,6 +32,6 @@ rectangle "Пользователи\n\nКлиенты: веб-браузер, An
 rectangle "Система\n\nСистема обработки пользовательских запросов" <<System>> as System
 rectangle "Внешние системы\n\nВнешние системы" <<System_ext>> as System_ext
 
-Users .[#8D8D8D,thickness=2].> System : <color:#8D8D8D>[...]
-System .[#8D8D8D,thickness=2].> System_ext : <color:#8D8D8D>[...]
+Users .[#15803d,thickness=2].> System : <color:#15803d>[...]\n<size:8>[<color:#15803d>HTTPS]</size>
+System .[#15803d,thickness=2].> System_ext : <color:#15803d>[...]\n<size:8>[<color:#15803d>HTTPS]</size>
 @enduml

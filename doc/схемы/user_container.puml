@@ -44,7 +44,7 @@ rectangle "Пользователи" <<Users>> as Users {
 }
 rectangle "Система\n\nСистема обработки пользовательских запросов" <<System>> as System
 
-UsersWeb .[#8D8D8D,thickness=2].> System : <color:#8D8D8D>Загрузка веб-интерфейса и API-запросы \n<color:#8D8D8D>(HTTP/1.1, HTTP/2)
-UsersAndroid .[#8D8D8D,thickness=2].> System : <color:#8D8D8D>API-запросы и уведомления в реальном \n<color:#8D8D8D>времени (HTTP/1.1, HTTP/2, WebSocket)
-UsersIos .[#8D8D8D,thickness=2].> System : <color:#8D8D8D>API-запросы и уведомления в реальном \n<color:#8D8D8D>времени (HTTP/1.1, HTTP/2, WebSocket)
+UsersWeb .[#15803d,thickness=2].> System : <color:#15803d>Загрузка веб-интерфейса и API-запросы\n<size:8>[<color:#15803d>HTTPS]</size>
+UsersAndroid .[#15803d,thickness=2].> System : <color:#15803d>API-запросы и уведомления в реальном \n<color:#15803d>времени\n<size:8>[<color:#15803d>HTTPS]</size>
+UsersIos .[#15803d,thickness=2].> System : <color:#15803d>API-запросы и уведомления в реальном \n<color:#15803d>времени\n<size:8>[<color:#15803d>HTTPS]</size>
 @enduml

@@ -1,0 +1,57 @@
+@startuml
+title "Контейрная диаграмма"
+top to bottom direction
+
+hide stereotype
+skinparam ranksep 60
+skinparam nodesep 30
+skinparam {
+  arrowFontSize 10
+  defaultTextAlignment center
+  wrapWidth 200
+  maxMessageSize 100
+  shadowing false
+}
+
+skinparam rectangle<<SystemBackend>>{
+  BackgroundColor #2b85e7
+  FontColor #f1ffff
+  BorderColor #1e73ce
+}
+skinparam rectangle<<SystemMonitoring>>{
+  BackgroundColor #2b85e7
+  FontColor #f1ffff
+  BorderColor #1e73ce
+}
+skinparam database<<SystemStorageDatabase>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemStorageCache>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+rectangle "Система" <<System>> as System {
+  skinparam RectangleBorderColor<<System>> #2b85e7
+  skinparam RectangleFontColor<<System>> #2b85e7
+  skinparam RectangleBorderStyle<<System>> dashed
+
+  rectangle "Обработка пользовательских запросов\n<size:10>[[Spring Boot]]</size>\n\nМикросервисы: пользователи, запросы, платежи, уведомления, аудит" <<SystemBackend>> as SystemBackend
+  rectangle "Система мониторинга\n\nСбор логов и метрик, обработка, хранение, дашборды и алертинг" <<SystemMonitoring>> as SystemMonitoring
+  rectangle "Хранение данных" <<SystemStorage>> as SystemStorage {
+    skinparam RectangleBorderColor<<SystemStorage>> #2b85e7
+    skinparam RectangleFontColor<<SystemStorage>> #2b85e7
+    skinparam RectangleBorderStyle<<SystemStorage>> dashed
+
+    database "База данных\n<size:10>[[PostgreSQL]]</size>\n\nDatabase per Service: users_db, requests_db, payments_db, notifications_db, audit_db" <<SystemStorageDatabase>> as SystemStorageDatabase
+    rectangle "Кэш\n<size:10>[[Redis Cluster]]</size>\n\nРаспределённый кэш (Cache-Aside, Write-Through)" <<SystemStorageCache>> as SystemStorageCache
+  }
+}
+
+SystemBackend .[#6366f1,thickness=2].> SystemStorageDatabase : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
+SystemBackend .[#6366f1,thickness=2].> SystemStorageCache : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
+SystemMonitoring .[#6366f1,thickness=2].> SystemStorageDatabase : <color:#6366f1>[...]
+SystemMonitoring .[#6366f1,thickness=2].> SystemStorageCache : <color:#6366f1>[...]
+@enduml

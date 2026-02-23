@@ -68,12 +68,12 @@ skinparam rectangle<<SystemMonitoringLogUi>>{
   FontColor #ffffff
   BorderColor #1892c5
 }
-skinparam rectangle<<SystemIam>>{
+skinparam rectangle<<SystemBackend>>{
   BackgroundColor #2b85e7
   FontColor #f1ffff
   BorderColor #1e73ce
 }
-skinparam rectangle<<SystemBackend>>{
+skinparam rectangle<<SystemIam>>{
   BackgroundColor #2b85e7
   FontColor #f1ffff
   BorderColor #1e73ce
@@ -82,6 +82,11 @@ skinparam rectangle<<SystemStorage>>{
   BackgroundColor #2b85e7
   FontColor #f1ffff
   BorderColor #1e73ce
+}
+skinparam queue<<SystemEventBus>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
 }
 rectangle "Система" <<System>> as System {
   skinparam RectangleBorderColor<<System>> #2b85e7
@@ -104,34 +109,39 @@ rectangle "Система" <<System>> as System {
   }
   rectangle "load-balancer\n<size:10>[[Nginx]]</size>\n\nЕдиная точка входа: распределение трафика, TLS termination" <<SystemLoadBalancer>> as SystemLoadBalancer
   rectangle "front\n<size:10>[[React]]</size>\n\nВеб-интерфейс для взаимодействия с системой" <<SystemFront>> as SystemFront
-  rectangle "api-gateway\n<size:10>[Spring Cloud Gateway]</size>\n\nМаршрутизация API, аутентификация, авторизация, rate limiting" <<SystemApiGateway>> as SystemApiGateway
+  rectangle "api-gateway\n<size:10>[[Spring Cloud Gateway]]</size>\n\nМаршрутизация API, аутентификация, авторизация, rate limiting" <<SystemApiGateway>> as SystemApiGateway
+  rectangle "Обработка пользовательских запросов\n<size:10>[[Spring Boot]]</size>\n\nМикросервисы: пользователи, запросы, платежи, уведомления, аудит" <<SystemBackend>> as SystemBackend
   rectangle "iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management" <<SystemIam>> as SystemIam
-  rectangle "Обработка пользовательских запросов\n<size:10>[[Spring]]</size>\n\nСистема обработки бизнес-логики" <<SystemBackend>> as SystemBackend
-  rectangle "Хранение данных\n\nХранение данных пользователя" <<SystemStorage>> as SystemStorage
+  rectangle "Хранение данных\n\nБД и кэш" <<SystemStorage>> as SystemStorage
+  queue "Event Bus\n<size:10>[[Apache Kafka]]</size>\n\nАсинхронные события между сервисами" <<SystemEventBus>> as SystemEventBus
 }
 
-SystemMonitoringLogCollector .[#8D8D8D,thickness=2].> SystemMonitoringLogBus : <color:#8D8D8D>Пересылка логов
-SystemMonitoringLogBus .[#8D8D8D,thickness=2].> SystemMonitoringLogProcessor : <color:#8D8D8D>Чтение из топиков
-SystemMonitoringLogProcessor .[#8D8D8D,thickness=2].> SystemMonitoringLogStorage : <color:#8D8D8D>Индексация и запись
-SystemMonitoringLogStorage .[#8D8D8D,thickness=2].> SystemMonitoringLogUi : <color:#8D8D8D>Запросы поиска и выборок
-SystemMonitoringMetricsStorage .[#8D8D8D,thickness=2].> SystemMonitoringLogUi : <color:#8D8D8D>Запросы к временным рядам (PromQL)
-SystemMonitoringMetricsCollector .[#8D8D8D,thickness=2].> SystemMonitoringMetricsStorage : <color:#8D8D8D>Скрейпинг и запись метрик
-SystemMonitoringMetricsStorage .[#8D8D8D,thickness=2].> SystemMonitoringAlerting : <color:#8D8D8D>Вычисление правил алертов
-SystemMonitoringLogCollector .[#8D8D8D,thickness=2].> SystemLoadBalancer : <color:#8D8D8D>Сбор access/error логов Nginx
-SystemMonitoringLogCollector .[#8D8D8D,thickness=2].> SystemFront : <color:#8D8D8D>Сбор логов веб-сервера и SPA
-SystemMonitoringLogCollector .[#8D8D8D,thickness=2].> SystemApiGateway : <color:#8D8D8D>Сбор логов шлюза (запросы, ошибки)
-SystemMonitoringLogCollector .[#8D8D8D,thickness=2].> SystemIam : <color:#8D8D8D>Сбор логов Keycloak/IAM
-SystemMonitoringLogCollector .[#8D8D8D,thickness=2].> SystemBackend : <color:#8D8D8D>Сбор логов микросервисов
-SystemMonitoringLogCollector .[#8D8D8D,thickness=2].> SystemStorage : <color:#8D8D8D>Сбор логов PostgreSQL
-SystemMonitoringMetricsCollector .[#8D8D8D,thickness=2].> SystemLoadBalancer : <color:#8D8D8D>Скрейпинг метрик Nginx
-SystemMonitoringMetricsCollector .[#8D8D8D,thickness=2].> SystemFront : <color:#8D8D8D>Сбор метрик веб-сервера
-SystemMonitoringMetricsCollector .[#8D8D8D,thickness=2].> SystemApiGateway : <color:#8D8D8D>Скрейпинг метрик шлюза
-SystemMonitoringMetricsCollector .[#8D8D8D,thickness=2].> SystemIam : <color:#8D8D8D>Сбор метрик Keycloak/IAM
-SystemMonitoringMetricsCollector .[#8D8D8D,thickness=2].> SystemBackend : <color:#8D8D8D>Скрейпинг метрик микросервисов
-SystemMonitoringMetricsCollector .[#8D8D8D,thickness=2].> SystemStorage : <color:#8D8D8D>Сбор метрик PostgreSQL
-SystemLoadBalancer .[#8D8D8D,thickness=2].> SystemFront
-SystemFront .[#8D8D8D,thickness=2].> SystemApiGateway
-SystemApiGateway .[#8D8D8D,thickness=2].> SystemIam : <color:#8D8D8D>Валидация JWT и проверка прав
-SystemApiGateway .[#8D8D8D,thickness=2].> SystemBackend
-SystemBackend .[#8D8D8D,thickness=2].> SystemStorage : <color:#8D8D8D>Чтение и запись данных
+SystemMonitoringLogCollector .[#6366f1,thickness=2].> SystemMonitoringLogBus : <color:#6366f1>Пересылка логов в шину\n<size:8>[<color:#6366f1>TCP]</size>
+SystemMonitoringLogBus .[#6366f1,thickness=2].> SystemMonitoringLogProcessor : <color:#6366f1>Чтение из топиков\n<size:8>[<color:#6366f1>TCP]</size>
+SystemMonitoringLogProcessor .[#6366f1,thickness=2].> SystemMonitoringLogStorage : <color:#6366f1>Индексация и запись в хранилище\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringLogStorage .[#6366f1,thickness=2].> SystemMonitoringLogUi : <color:#6366f1>Запросы поиска и выборок\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringMetricsStorage .[#6366f1,thickness=2].> SystemMonitoringLogUi : <color:#6366f1>Запросы к временным рядам (PromQL)\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringMetricsCollector .[#6366f1,thickness=2].> SystemMonitoringMetricsStorage : <color:#6366f1>Скрейпинг и запись метрик\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringMetricsStorage .[#6366f1,thickness=2].> SystemMonitoringAlerting : <color:#6366f1>Вычисление правил алертов\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringLogCollector .[#6366f1,thickness=2].> SystemLoadBalancer : <color:#6366f1>Сбор access/error логов Nginx\n<size:8>[<color:#6366f1>TCP]</size>
+SystemMonitoringLogCollector .[#6366f1,thickness=2].> SystemFront : <color:#6366f1>Сбор логов веб-сервера и SPA\n<size:8>[<color:#6366f1>TCP]</size>
+SystemMonitoringLogCollector .[#6366f1,thickness=2].> SystemApiGateway : <color:#6366f1>Сбор логов шлюза (запросы, ошибки)\n<size:8>[<color:#6366f1>TCP]</size>
+SystemMonitoringLogCollector .[#6366f1,thickness=2].> SystemIam : <color:#6366f1>Сбор логов Keycloak/IAM\n<size:8>[<color:#6366f1>TCP]</size>
+SystemMonitoringLogCollector .[#6366f1,thickness=2].> SystemBackend : <color:#6366f1>Сбор логов приложения\n<size:8>[<color:#6366f1>TCP]</size>
+SystemMonitoringLogCollector .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
+SystemMonitoringLogCollector .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>Сбор логов Kafka\n<size:8>[<color:#6366f1>TCP]</size>
+SystemMonitoringMetricsCollector .[#6366f1,thickness=2].> SystemLoadBalancer : <color:#6366f1>Скрейпинг метрик Nginx\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringMetricsCollector .[#6366f1,thickness=2].> SystemFront : <color:#6366f1>Сбор метрик веб-сервера\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringMetricsCollector .[#6366f1,thickness=2].> SystemApiGateway : <color:#6366f1>Скрейпинг метрик шлюза\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringMetricsCollector .[#6366f1,thickness=2].> SystemIam : <color:#6366f1>Сбор метрик Keycloak/IAM\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringMetricsCollector .[#6366f1,thickness=2].> SystemBackend : <color:#6366f1>Скрейпинг метрик\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringMetricsCollector .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringMetricsCollector .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>Сбор метрик Kafka\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemLoadBalancer .[#6366f1,thickness=2].> SystemFront : <color:#6366f1>Раздача статики и проксирование API\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemFront .[#6366f1,thickness=2].> SystemApiGateway : <color:#6366f1>Вызовы API с фронтенда\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemApiGateway .[#15803d,thickness=2].> SystemIam : <color:#15803d>Валидация JWT, проверка прав, JWKS\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemApiGateway .[#6366f1,thickness=2].> SystemBackend : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemBackend .[#15803d,thickness=2].> SystemIam : <color:#15803d>Синхронизация пользователей, ролей и \n<color:#15803d>сессий с Keycloak\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemBackend .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
+SystemBackend .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
 @enduml
