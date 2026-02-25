@@ -1,5 +1,6 @@
 {
     name: "system",
     title: "Система",
-    description: 'ДЗ ОТУС system-design'
+    description: 'ДЗ ОТУС system-design',
+    implicitViews: false
 }
