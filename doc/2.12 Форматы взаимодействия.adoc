@@ -1,1 +1,64 @@
 === Форматы взаимодействия
+
+Форматы данных и контракты на границах компонентов (клиент–сервер, API Gateway–Backend, Backend–внешние системы, Event Bus). Связь с протоколами — документ 2.11.
+
+==== REST API (клиенты, API Gateway, микросервисы)
+
+*Сериализация:* JSON (UTF-8). Content-Type: `application/json`.
+
+*Идентификация ресурсов:* URL path (например, `/api/v1/requests`, `/api/v1/users/{id}`). Версионирование API: префикс пути `/api/v1/`, `/api/v2/`.
+
+*Заголовки запросов (обязательные/рекомендуемые):*
+  * `Authorization: Bearer <JWT>` — аутентификация.
+  * `X-Request-Id`, `X-Trace-Id` — сквозная трассировка (генерация на Gateway или клиенте).
+  * `Content-Type: application/json`, `Accept: application/json`.
+
+*Ответы:* HTTP-статус по семантике REST (200, 201, 400, 401, 403, 404, 429, 500); тело ошибки — JSON с полями `code`, `message`, опционально `details`. Успешные ответы — JSON-представление ресурса или списка (с пагинацией: `offset`, `limit`, `total`).
+
+*Контракты:* описание API в OpenAPI 3.0 (YAML/JSON). Спецификация ключевых endpoint'ов API Gateway: `openapi/api-gateway.yaml` — пути `/api/v1/users`, `/api/v1/requests`, `/api/v1/payments`, `/api/v1/notifications`, схемы данных согласованы с общей моделью (документ 2.06). Использование: генерация клиентов, валидация запросов/ответов, документация (Swagger UI).
+
+==== JWT и OAuth 2.0 / OIDC
+
+*Access token:* JWT (RS256/ES256), claims: `sub`, `exp`, `iat`, `realm`, роли (например, `roles`). Время жизни: 15–30 мин.
+
+*Refresh token:* непрозрачный или JWT, хранение на клиенте в secure storage; обмен на новый access token через endpoint IAM.
+
+*JWKS:* JSON Web Key Set по URL (HTTPS), используется API Gateway или сервисами для проверки подписи JWT без вызова IAM на каждый запрос.
+
+==== WebSocket (мобильные клиенты, уведомления в реальном времени)
+
+*Установление:* upgrade по HTTP/1.1 или через HTTP/2; после handshake — полно дуплексный канал.
+
+*Формат сообщений:* текстовые или бинарные фреймы; содержимое — JSON (например, тип события, payload уведомления). Подпротокол при необходимости для версионирования.
+
+*Использование:* push-уведомления, обновление статуса запроса в реальном времени; аутентификация при установлении соединения (query/header с токеном или первое сообщение с JWT).
+
+==== Event Bus (Kafka): форматы сообщений
+
+*Топики (примеры):* `notification.requests`, `payment.events`, `audit.events` — именование по домену и назначению.
+
+*Тело сообщения:* JSON (по умолчанию) или Avro/Protobuf при необходимости схемы и совместимости версий. Ключ сообщения: при партиционировании по пользователю или агрегату — `user_id` или `request_id` для упорядоченности.
+
+*Заголовки (headers):* `event_type`, `trace_id`, `timestamp`, `source_service` — для маршрутизации и трассировки.
+
+*Контракт события (пример для уведомления):* `event_type`, `user_id`, `channel`, `template_id`, `payload` (JSON); версионирование через `event_type` (например, `notification.request.v1`) или поле `version`.
+
+==== Внешние системы
+
+*Платёжная система:* запрос/ответ и webhook — JSON; поля запроса платежа: `amount`, `currency`, `idempotency_key`, `callback_url`, `metadata`; webhook — подпись (HMAC или аналог), проверка на стороне Backend.
+
+*Уведомления (Email/SMS):* REST API провайдера — JSON (получатель, шаблон, параметры); SMTP — MIME для email.
+
+==== Сводка форматов по границам
+
+[options="header",cols="2,2,2"]
+|===
+| Граница | Формат данных | Контракт/схема
+| Клиент ↔ API | JSON (REST), WebSocket frames (JSON) | OpenAPI 3.0
+| API Gateway ↔ Backend | JSON (REST) | OpenAPI, внутренние контракты
+| Backend ↔ IAM | JWT, JWKS, OAuth2/OIDC | Стандарты OAuth2/OIDC
+| Backend ↔ Kafka | JSON или Avro (сообщения) | Описание топиков и полей событий
+| Backend ↔ Платёжная система | JSON (REST, webhook) | Документация провайдера
+| Backend ↔ PostgreSQL | SQL, типы БД | Схема БД (миграции)
+| Backend ↔ Redis | Сериализованные значения (например, JSON) | Соглашение по ключам и TTL
+|===

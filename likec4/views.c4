@@ -37,4 +37,22 @@ views {
                 system.*
                 // system.*
     }
+    view backend_container of system.backend {
+        title 'System/Обработка пользовательских запросов/Контейнерная диаграмма'
+        description 'Микросервисы, взаимодействие с БД, кэшем, Event Bus и внешними системами'
+
+        include system,
+                backend,
+                backend.*,
+                *
+    }
+
+    view db_container of system.storage {
+        title 'System/Хранение данных/Контейрная диаграмма'
+        description 'Описание системы хранения данных'
+
+        include *,
+                system
+
+    }
 }

@@ -92,6 +92,36 @@ specification {
     }
   }
 
+  relationship http {
+    color indigo
+    //tail normal
+    technology 'HTTP'
+  }
+
+  relationship ip {
+    color indigo
+    //tail normal
+    technology 'IP'
+  }
+
+  relationship https {
+    color green
+    //tail normal
+    technology 'HTTPS'
+  }
+
+  relationship grpc {
+    color indigo
+    tail normal
+    technology 'GRPC'
+  }
+
+  relationship tcp {
+    color indigo
+    tail normal
+    technology 'TCP'
+  }
+
   // синхронные вызовы
   tag sync 
 

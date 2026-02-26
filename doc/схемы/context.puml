@@ -38,12 +38,12 @@ skinparam rectangle<<SystemApiGateway>>{
   FontColor #ffffff
   BorderColor #1892c5
 }
-skinparam rectangle<<SystemIam>>{
+skinparam rectangle<<SystemBackend>>{
   BackgroundColor #2b85e7
   FontColor #f1ffff
   BorderColor #1e73ce
 }
-skinparam rectangle<<SystemBackend>>{
+skinparam rectangle<<SystemIam>>{
   BackgroundColor #2b85e7
   FontColor #f1ffff
   BorderColor #1e73ce
@@ -52,6 +52,11 @@ skinparam rectangle<<SystemStorage>>{
   BackgroundColor #2b85e7
   FontColor #f1ffff
   BorderColor #1e73ce
+}
+skinparam queue<<SystemEventBus>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
 }
 skinparam rectangle<<System_ext>>{
   BackgroundColor #827a8e
@@ -67,25 +72,29 @@ rectangle "Система" <<System>> as System {
   rectangle "Система мониторинга\n\nСбор логов и метрик, обработка, хранение, дашборды и алертинг" <<SystemMonitoring>> as SystemMonitoring
   rectangle "load-balancer\n<size:10>[[Nginx]]</size>\n\nЕдиная точка входа: распределение трафика, TLS termination" <<SystemLoadBalancer>> as SystemLoadBalancer
   rectangle "front\n<size:10>[[React]]</size>\n\nВеб-интерфейс для взаимодействия с системой" <<SystemFront>> as SystemFront
-  rectangle "api-gateway\n<size:10>[Spring Cloud Gateway]</size>\n\nМаршрутизация API, аутентификация, авторизация, rate limiting" <<SystemApiGateway>> as SystemApiGateway
+  rectangle "api-gateway\n<size:10>[[Spring Cloud Gateway]]</size>\n\nМаршрутизация API, аутентификация, авторизация, rate limiting" <<SystemApiGateway>> as SystemApiGateway
+  rectangle "Обработка пользовательских запросов\n<size:10>[[Spring Boot]]</size>\n\nМикросервисы: пользователи, запросы, платежи, уведомления, аудит" <<SystemBackend>> as SystemBackend
   rectangle "iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management" <<SystemIam>> as SystemIam
-  rectangle "Обработка пользовательских запросов\n<size:10>[[Spring]]</size>\n\nСистема обработки бизнес-логики" <<SystemBackend>> as SystemBackend
-  rectangle "Хранение данных\n\nХранение данных пользователя" <<SystemStorage>> as SystemStorage
+  rectangle "Хранение данных\n\nБД и кэш" <<SystemStorage>> as SystemStorage
+  queue "Event Bus\n<size:10>[[Apache Kafka]]</size>\n\nАсинхронные события между сервисами" <<SystemEventBus>> as SystemEventBus
 }
 rectangle "Внешние системы\n\nВнешние системы" <<System_ext>> as System_ext
 
-Users .[#8D8D8D,thickness=2].> SystemLoadBalancer : <color:#8D8D8D>[...]
-SystemLoadBalancer .[#8D8D8D,thickness=2].> SystemFront
-SystemMonitoring .[#8D8D8D,thickness=2].> SystemLoadBalancer : <color:#8D8D8D>[...]
-SystemFront .[#8D8D8D,thickness=2].> SystemApiGateway
-SystemMonitoring .[#8D8D8D,thickness=2].> SystemFront : <color:#8D8D8D>[...]
-SystemApiGateway .[#8D8D8D,thickness=2].> SystemIam : <color:#8D8D8D>Валидация JWT и проверка прав
-SystemApiGateway .[#8D8D8D,thickness=2].> SystemBackend
-SystemMonitoring .[#8D8D8D,thickness=2].> SystemApiGateway : <color:#8D8D8D>[...]
-SystemMonitoring .[#8D8D8D,thickness=2].> SystemIam : <color:#8D8D8D>[...]
-SystemBackend .[#8D8D8D,thickness=2].> SystemStorage : <color:#8D8D8D>Чтение и запись данных
-SystemMonitoring .[#8D8D8D,thickness=2].> SystemBackend : <color:#8D8D8D>[...]
-SystemMonitoring .[#8D8D8D,thickness=2].> SystemStorage : <color:#8D8D8D>[...]
-SystemApiGateway .[#8D8D8D,thickness=2].> System_ext : <color:#8D8D8D>Проверка токенов и синхронизация \n<color:#8D8D8D>пользователей
-SystemBackend .[#8D8D8D,thickness=2].> System_ext : <color:#8D8D8D>[...]
+Users .[#15803d,thickness=2].> SystemLoadBalancer : <color:#15803d>[...]\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemLoadBalancer .[#6366f1,thickness=2].> SystemFront : <color:#6366f1>Раздача статики и проксирование API\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoring .[#6366f1,thickness=2].> SystemLoadBalancer : <color:#6366f1>[...]
+SystemFront .[#6366f1,thickness=2].> SystemApiGateway : <color:#6366f1>Вызовы API с фронтенда\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoring .[#6366f1,thickness=2].> SystemFront : <color:#6366f1>[...]
+SystemApiGateway .[#15803d,thickness=2].> SystemIam : <color:#15803d>Валидация JWT, проверка прав, JWKS\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemApiGateway .[#6366f1,thickness=2].> SystemBackend : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoring .[#6366f1,thickness=2].> SystemApiGateway : <color:#6366f1>[...]
+SystemBackend .[#15803d,thickness=2].> SystemIam : <color:#15803d>Синхронизация пользователей, ролей и \n<color:#15803d>сессий с Keycloak\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemMonitoring .[#6366f1,thickness=2].> SystemIam : <color:#6366f1>[...]
+SystemBackend .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
+SystemBackend .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
+SystemMonitoring .[#6366f1,thickness=2].> SystemBackend : <color:#6366f1>[...]
+SystemMonitoring .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]
+SystemMonitoring .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>[...]
+SystemApiGateway .[#15803d,thickness=2].> System_ext : <color:#15803d>Логин, refresh токенов, синхронизация \n<color:#15803d>пользователей\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemBackend .[#15803d,thickness=2].> System_ext : <color:#15803d>[...]\n<size:8>[<color:#15803d>HTTPS]</size>
 @enduml

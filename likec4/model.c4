@@ -31,7 +31,7 @@ model{
         }
         api-gateway = container {
             summary 'Маршрутизация API, аутентификация, авторизация, rate limiting'
-            technology 'Spring Cloud Gateway'
+            technology '[Spring Cloud Gateway]'
             icon aws:api-gateway
         }
         iam = system {
@@ -41,21 +41,96 @@ model{
             icon tech:oauth
         }
 
-        backend = system 'Обработка пользовательских запросов'{
-            technology '[Spring]'
-            summary 'Система обработки бизнес-логики'
+        backend = system 'Обработка пользовательских запросов' {
+            technology '[Spring Boot]'
+            summary 'Микросервисы: пользователи, запросы, платежи, уведомления, аудит'
             icon bootstrap:gear-wide-connected
+
+            user-service = container 'User Service' {
+                summary 'Профили, сессии, роли'
+                technology '[Spring Boot]'
+                icon tech:java
+                description '''
+                    **Назначение:** управление пользователями, профилями, сессиями и правами доступа.
+
+                    - **Профиль:** просмотр и редактирование персональных данных (имя, email, телефон, аватар), настройки безопасности и интерфейса.
+                    - **Сессии:** учёт активных сессий, завершение сессий, синхронизация с IAM (Keycloak).
+                    - **Роли и разрешения:** хранение и проверка RBAC (ADMIN, OPERATOR, USER, VIEWER), детальные permissions (READ, WRITE, DELETE, EXECUTE).
+                    - **Данные:** users_db (PostgreSQL); кэш профилей и сессий в Redis (Cache-Aside). Масштабирование: min 3 инстанса в разных АЗ.
+                '''
+            }
+            request-processing-service = container 'Request Processing Service' {
+                summary 'Обработка запросов (PROCESS_DATA, REPORT, EXPORT, RESOURCES)'
+                technology '[Spring Boot]'
+                icon tech:java
+                description '''
+                    **Назначение:** приём, постановка в очередь и обработка пользовательских запросов с приоритизацией.
+
+                    - **Типы запросов:** PROCESS_DATA, GENERATE_REPORT, EXPORT_DATA, MANAGE_RESOURCES; приоритет 1–10 (1 — наивысший), FIFO при равном приоритете.
+                    - **Очередь:** асинхронная обработка, мониторинг queue depth (алерт при > 1000); при перегрузке — обслуживание высокоприоритетных.
+                    - **Данные:** requests_db (PostgreSQL), кэш результатов в Redis; публикация событий в Event Bus (уведомления, аудит).
+                    - **Нагрузка:** наибольшая доля трафика (~40–50% RPS); ориентир 2–5K RPS на инстанс; автоскейлинг по CPU, latency p95, queue depth.
+                '''
+            }
+            payment-service = container 'Payment Service' {
+                summary 'Платежи, интеграция с провайдером, Outbox'
+                technology '[Spring Boot]'
+                icon tech:java
+                description '''
+                    **Назначение:** инициация платежей, приём webhook от платёжного провайдера, учёт транзакций и возвратов.
+
+                    - **Платежи:** создание транзакции, вызов REST API провайдера (идемпотентность по idempotency key), сохранение статуса (Pending → Completed/Failed).
+                    - **Outbox Pattern:** запись события в payment_outbox для гарантированной публикации в Event Bus (уведомления, аудит).
+                    - **Webhook:** приём callback от провайдера, проверка подписи, обновление статуса; Saga Pattern и компенсирующие транзакции при ошибках.
+                    - **Данные:** payments_db (PostgreSQL). Circuit Breaker и Retry при вызовах к внешней платёжной системе.
+                '''
+            }
+            notification-service = container 'Notification Service' {
+                summary 'Уведомления (Email, SMS, Push), потребитель событий'
+                technology '[Spring Boot]'
+                icon tech:java
+                description '''
+                    **Назначение:** доставка уведомлений пользователям по каналам и учёт статусов доставки.
+
+                    - **Потребление событий:** подписка на топики Kafka (notification.requests и др.), идемпотентная обработка; шаблоны, персонализация, мультиязычность.
+                    - **Каналы:** Email (SMTP/API), SMS, Push, In-app; интеграция с внешней системой уведомлений по REST/HTTPS.
+                    - **Доставка:** асинхронная отправка, retry при сбоях, сохранение статуса доставки в notifications_db.
+                    - **Данные:** notifications_db (PostgreSQL); масштабирование потребителей Kafka при росте lag.
+                '''
+            }
+            audit-service = container 'Audit Service' {
+                summary 'Аудит операций и безопасности'
+                technology '[Spring Boot]'
+                icon tech:java
+                description '''
+                    **Назначение:** запись событий аудита и безопасности для соответствия и расследования инцидентов.
+
+                    - **Потребление событий:** подписка на топики Kafka (audit.events, payment.events, notification и др.); batch-запись в БД для снижения нагрузки.
+                    - **Содержимое:** кто, когда, какое действие, над каким ресурсом, результат; маскирование PII в логах.
+                    - **Данные:** audit_db (PostgreSQL); при необходимости экспорт в Elasticsearch для поиска. Retention и архивирование по политике (hot/warm/cold).
+                '''
+            }
         }
 
-        storage = system 'Хранение данных'{
-            summary 'Хранение данных пользователя'
+        storage = system 'Хранение данных' {
+            summary 'БД и кэш'
             icon bootstrap:database
 
-            database = database 'База данных'{
+            database = database 'База данных' {
                 technology '[PostgreSQL]'
-                summary 'Хранение данных пользователей и их запросов'
+                summary 'Database per Service: users_db, requests_db, payments_db, notifications_db, audit_db'
                 icon tech:postgresql
             }
+            cache = container 'Кэш' {
+                summary 'Распределённый кэш (Cache-Aside, Write-Through)'
+                technology '[Redis Cluster]'
+                icon tech:redis
+            }
+        }
+
+        event-bus = queue 'Event Bus' {
+            summary 'Асинхронные события между сервисами'
+            technology '[Apache Kafka]'
         }    
         monitoring = system 'Система мониторинга' {
             summary 'Сбор логов и метрик, обработка, хранение, дашборды и алертинг'
@@ -123,79 +198,79 @@ model{
 
 
 
-    // ==== relations ====
-    // Клиенты подключаются к системе синхронно (протоколы в подписи)
-    web -> load-balancer 'Загрузка веб-интерфейса и API-запросы (HTTP/1.1, HTTP/2)' {
-        #sync
-    }
-    android -> load-balancer 'API-запросы и уведомления в реальном времени (HTTP/1.1, HTTP/2, WebSocket)' {
-        #sync
-    }
-    ios -> load-balancer 'API-запросы и уведомления в реальном времени (HTTP/1.1, HTTP/2, WebSocket)' {
-        #sync
-    }
-    load-balancer -> front {
-        #sync
-    }
-    front -> api-gateway {
-        #sync
-    }
-    api-gateway -> backend {
-        #sync
-    }
-    api-gateway -> iam 'Валидация JWT и проверка прав' 'OAuth 2.0, OIDC, JWT (HTTPS)' {
-        #sync
-    }
-    api-gateway -> iam_ext 'Проверка токенов и синхронизация пользователей' 'OAuth 2.0, OpenID Connect (HTTPS)' {
-        #sync
-    }
-    backend -> database 'Чтение и запись данных' 'JDBC, SQL (TCP)' {
-        #sync
-    }
-    backend -> payment 'Инициация платежа, получение статусов по Webhook' 'REST API (HTTPS), Webhook' {
-        #sync
-    }
-    backend -> notification 'Отправка уведомлений (SMS, email, push), статусы доставки' 'REST API (HTTPS), SMTP' {
-        #async
-    }
-    // Мониторинг: сбор логов с компонентов. Технология: Fluent Bit (file tail на узле или приём Fluent Forward). Протокол/порт: Forward TCP 24224 или чтение файлов (same host).
-    monitoring.log-collector -> load-balancer 'Сбор access/error логов Nginx' 'Fluent Bit; file tail / Forward; TCP 24224'
-    monitoring.log-collector -> front 'Сбор логов веб-сервера и SPA' 'Fluent Bit; file tail / Forward; TCP 24224'
-    monitoring.log-collector -> api-gateway 'Сбор логов шлюза (запросы, ошибки)' 'Fluent Bit; file tail / Forward; TCP 24224'
-    monitoring.log-collector -> backend 'Сбор логов микросервисов' 'Fluent Bit; file tail / Forward; TCP 24224'
-    monitoring.log-collector -> database 'Сбор логов PostgreSQL' 'Fluent Bit; file tail / Forward; TCP 24224'
-    monitoring.log-collector -> iam 'Сбор логов Keycloak/IAM' 'Fluent Bit; file tail / Forward; TCP 24224'
+    // ==== relations (протоколы из specs: https, http, tcp, grpc) ====
+    // Клиенты → система
+    web -[https]-> load-balancer 'Загрузка веб-интерфейса и API-запросы' 'HTTPS, TLS 1.3; HTTP/1.1, HTTP/2' { #sync }
+    android -[https]-> load-balancer 'API-запросы и уведомления в реальном времени' 'HTTPS; HTTP/1.1, HTTP/2, WebSocket' { #sync }
+    ios -[https]-> load-balancer 'API-запросы и уведомления в реальном времени' 'HTTPS; HTTP/1.1, HTTP/2, WebSocket' { #sync }
 
-    // Мониторинг: сбор метрик. Prometheus скрейпит /metrics по HTTP. Порты: экспортеры или management port приложений.
-    monitoring.metrics-collector -> load-balancer 'Скрейпинг метрик Nginx' 'Prometheus; HTTP GET /metrics; TCP 9113 (nginx-exporter)'
-    monitoring.metrics-collector -> front 'Сбор метрик веб-сервера' 'Prometheus; HTTP GET /metrics; TCP 8080'
-    monitoring.metrics-collector -> api-gateway 'Скрейпинг метрик шлюза' 'Prometheus; HTTP GET /actuator/prometheus; TCP 8080'
-    monitoring.metrics-collector -> backend 'Скрейпинг метрик микросервисов' 'Prometheus; HTTP GET /actuator/prometheus; TCP 8080'
-    monitoring.metrics-collector -> database 'Сбор метрик PostgreSQL' 'Prometheus; HTTP GET /metrics; TCP 9187 (postgres_exporter)'
-    monitoring.metrics-collector -> iam 'Сбор метрик Keycloak/IAM' 'Prometheus; HTTP GET /metrics; TCP 9090'
+    // Внутри system: LB → Front → API Gateway
+    load-balancer -[http]-> front 'Раздача статики и проксирование API' 'HTTP, внутренняя сеть' { #sync }
+    front -[http]-> api-gateway 'Вызовы API с фронтенда' 'HTTP/HTTPS, JSON (REST)' { #sync }
 
-    // ---- Внутри системы мониторинга: поток логов ----
-    log-collector -> log-bus 'Пересылка логов' {
-        #async
-    }
-    log-bus -> log-processor 'Чтение из топиков' {
-        #async
-    }
-    log-processor -> log-storage 'Индексация и запись' {
-        #sync
-    }
-    log-storage -> log-ui 'Запросы поиска и выборок' {
-        #sync
-    }
+    // API Gateway (входит в system) → микросервисы backend по путям /api/*
+    api-gateway -[http]-> user-service 'Маршрутизация /api/users, профиль, сессии' 'HTTP/2, JSON (REST)' { #sync }
+    api-gateway -[http]-> request-processing-service 'Маршрутизация /api/requests' 'HTTP/2, JSON (REST)' { #sync }
+    api-gateway -[http]-> payment-service 'Маршрутизация /api/payments' 'HTTP/2, JSON (REST)' { #sync }
+    api-gateway -[http]-> notification-service 'Маршрутизация /api/notifications, настройки' 'HTTP/2, JSON (REST)' { #sync }
 
-    // ---- Внутри системы мониторинга: поток метрик ----
-    metrics-collector -> metrics-storage 'Скрейпинг и запись метрик' {
-        #sync
-    }
-    metrics-storage -> log-ui 'Запросы к временным рядам (PromQL)' {
-        #sync
-    }
-    metrics-storage -> alerting 'Вычисление правил алертов' {
-        #sync
-    }
+    // API Gateway → IAM (внутренний и внешний)
+    api-gateway -[https]-> iam 'Валидация JWT, проверка прав, JWKS' 'HTTPS, OAuth 2.0, OIDC, JWT' { #sync }
+    api-gateway -[https]-> iam_ext 'Логин, refresh токенов, синхронизация пользователей' 'HTTPS, OAuth 2.0, OpenID Connect' { #sync }
+
+    // User Service → IAM (синхронизация пользователей и сессий с Keycloak)
+    user-service -[https]-> iam 'Синхронизация пользователей, ролей и сессий с Keycloak' 'HTTPS, REST, JSON; OAuth2/OIDC' { #sync }
+
+    // Микросервисы → БД, кэш, Event Bus, внешние системы (протоколы: tcp для JDBC/Redis/Kafka, https для внешних API)
+    user-service -[tcp]-> database 'Чтение/запись users, sessions, roles' 'TCP, JDBC, PostgreSQL' { #sync }
+    user-service -[tcp]-> cache 'Профили, сессии (Cache-Aside)' 'TCP, Redis RESP' { #sync }
+    request-processing-service -[tcp]-> database 'Запросы, история, вложения' 'TCP, JDBC, PostgreSQL' { #sync }
+    request-processing-service -[tcp]-> cache 'Результаты запросов (Cache-Aside)' 'TCP, Redis RESP' { #sync }
+    request-processing-service -[tcp]-> event-bus 'Публикация событий (уведомления, аудит)' 'TCP, Kafka Protocol, JSON' { #async }
+    payment-service -[tcp]-> database 'Транзакции, outbox' 'TCP, JDBC, PostgreSQL' { #sync }
+    payment-service -[tcp]-> event-bus 'События платежей (уведомления, аудит)' 'TCP, Kafka Protocol, JSON' { #async }
+    payment-service -[https]-> payment 'Инициация платежа; приём Webhook' 'HTTPS, REST, JSON' { #sync }
+    notification-service -[tcp]-> event-bus 'Потребление событий уведомлений' 'TCP, Kafka Protocol, JSON' { #async }
+    notification-service -[tcp]-> database 'Статусы доставки' 'TCP, JDBC, PostgreSQL' { #sync }
+    notification-service -[https]-> notification 'Отправка (Email, SMS, Push)' 'HTTPS, REST; SMTP' { #async }
+    audit-service -[tcp]-> event-bus 'Потребление событий аудита' 'TCP, Kafka Protocol, JSON' { #async }
+    audit-service -[tcp]-> database 'Запись аудит-логов' 'TCP, JDBC, PostgreSQL' { #sync }
+    // Мониторинг: сбор логов (Fluent Bit — file tail / Forward по TCP)
+    monitoring.log-collector -[tcp]-> load-balancer 'Сбор access/error логов Nginx' 'TCP, Fluent Bit Forward 24224 / file tail' { #async }
+    monitoring.log-collector -[tcp]-> front 'Сбор логов веб-сервера и SPA' 'TCP, Fluent Bit Forward 24224 / file tail' { #async }
+    monitoring.log-collector -[tcp]-> api-gateway 'Сбор логов шлюза (запросы, ошибки)' 'TCP, Fluent Bit Forward 24224' { #async }
+    monitoring.log-collector -[tcp]-> user-service 'Сбор логов приложения' 'TCP, Fluent Bit Forward 24224' { #async }
+    monitoring.log-collector -[tcp]-> request-processing-service 'Сбор логов приложения' 'TCP, Fluent Bit Forward 24224' { #async }
+    monitoring.log-collector -[tcp]-> payment-service 'Сбор логов приложения' 'TCP, Fluent Bit Forward 24224' { #async }
+    monitoring.log-collector -[tcp]-> notification-service 'Сбор логов приложения' 'TCP, Fluent Bit Forward 24224' { #async }
+    monitoring.log-collector -[tcp]-> audit-service 'Сбор логов приложения' 'TCP, Fluent Bit Forward 24224' { #async }
+    monitoring.log-collector -[tcp]-> database 'Сбор логов PostgreSQL' 'TCP, Fluent Bit Forward 24224 / file tail' { #async }
+    monitoring.log-collector -[tcp]-> cache 'Сбор логов Redis' 'TCP, Fluent Bit Forward 24224' { #async }
+    monitoring.log-collector -[tcp]-> event-bus 'Сбор логов Kafka' 'TCP, Fluent Bit Forward 24224' { #async }
+    monitoring.log-collector -[tcp]-> iam 'Сбор логов Keycloak/IAM' 'TCP, Fluent Bit Forward 24224 / file tail' { #async }
+
+    // Мониторинг: сбор метрик (Prometheus scrape по HTTP)
+    monitoring.metrics-collector -[http]-> load-balancer 'Скрейпинг метрик Nginx' 'HTTP GET /metrics, nginx-exporter 9113' { #sync }
+    monitoring.metrics-collector -[http]-> front 'Сбор метрик веб-сервера' 'HTTP GET /metrics, порт 8080' { #sync }
+    monitoring.metrics-collector -[http]-> api-gateway 'Скрейпинг метрик шлюза' 'HTTP GET /actuator/prometheus, порт 8080' { #sync }
+    monitoring.metrics-collector -[http]-> user-service 'Скрейпинг метрик' 'HTTP GET /actuator/prometheus, порт 8080' { #sync }
+    monitoring.metrics-collector -[http]-> request-processing-service 'Скрейпинг метрик' 'HTTP GET /actuator/prometheus, порт 8080' { #sync }
+    monitoring.metrics-collector -[http]-> payment-service 'Скрейпинг метрик' 'HTTP GET /actuator/prometheus, порт 8080' { #sync }
+    monitoring.metrics-collector -[http]-> notification-service 'Скрейпинг метрик' 'HTTP GET /actuator/prometheus, порт 8080' { #sync }
+    monitoring.metrics-collector -[http]-> audit-service 'Скрейпинг метрик' 'HTTP GET /actuator/prometheus, порт 8080' { #sync }
+    monitoring.metrics-collector -[http]-> database 'Сбор метрик PostgreSQL' 'HTTP GET /metrics, postgres_exporter 9187' { #sync }
+    monitoring.metrics-collector -[http]-> cache 'Сбор метрик Redis' 'HTTP GET /metrics, redis-exporter 9121' { #sync }
+    monitoring.metrics-collector -[http]-> event-bus 'Сбор метрик Kafka' 'HTTP/JMX, JMX Exporter 9999' { #sync }
+    monitoring.metrics-collector -[http]-> iam 'Сбор метрик Keycloak/IAM' 'HTTP GET /metrics, порт 9090' { #sync }
+
+    // Внутри системы мониторинга: поток логов
+    log-collector -[tcp]-> log-bus 'Пересылка логов в шину' 'TCP, Kafka Protocol' { #async }
+    log-bus -[tcp]-> log-processor 'Чтение из топиков' 'TCP, Kafka Protocol' { #async }
+    log-processor -[http]-> log-storage 'Индексация и запись в хранилище' 'HTTP, Elasticsearch API' { #sync }
+    log-storage -[http]-> log-ui 'Запросы поиска и выборок' 'HTTP, Elasticsearch/Kibana API' { #sync }
+
+    // Внутри системы мониторинга: поток метрик
+    metrics-collector -[http]-> metrics-storage 'Скрейпинг и запись метрик' 'HTTP, remote write / scrape' { #sync }
+    metrics-storage -[http]-> log-ui 'Запросы к временным рядам (PromQL)' 'HTTP, Prometheus Query API' { #sync }
+    metrics-storage -[http]-> alerting 'Вычисление правил алертов' 'HTTP, Prometheus Alertmanager' { #sync }
 }
