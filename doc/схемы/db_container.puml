@@ -23,12 +23,22 @@ skinparam rectangle<<SystemMonitoring>>{
   FontColor #f1ffff
   BorderColor #1e73ce
 }
-skinparam database<<SystemStorageDatabase>>{
+skinparam database<<SystemStoragePostgresMaster>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam database<<SystemStoragePostgresReplicas>>{
   BackgroundColor #23a2d9
   FontColor #ffffff
   BorderColor #1892c5
 }
 skinparam rectangle<<SystemStorageCache>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam database<<SystemStorageBackupStorage>>{
   BackgroundColor #23a2d9
   FontColor #ffffff
   BorderColor #1892c5
@@ -45,13 +55,19 @@ rectangle "Система" <<System>> as System {
     skinparam RectangleFontColor<<SystemStorage>> #2b85e7
     skinparam RectangleBorderStyle<<SystemStorage>> dashed
 
-    database "База данных\n<size:10>[[PostgreSQL]]</size>\n\nDatabase per Service: users_db, requests_db, payments_db, notifications_db, audit_db" <<SystemStorageDatabase>> as SystemStorageDatabase
-    rectangle "Кэш\n<size:10>[[Redis Cluster]]</size>\n\nРаспределённый кэш (Cache-Aside, Write-Through)" <<SystemStorageCache>> as SystemStorageCache
+    database "PostgreSQL (master)\n<size:10>[[PostgreSQL]]</size>\n\nЕдиная точка записи: users_db, requests_db, payments_db, notifications_db, audit_db. Синхронная репликация на read replicas; RPO=0." <<SystemStoragePostgresMaster>> as SystemStoragePostgresMaster
+    database "PostgreSQL (read replicas)\n<size:10>[[PostgreSQL]]</size>\n\nЧтение только с реплик (streaming replication). Масштабирование чтения; ~28K RPS при cache hit 80% (2.07)." <<SystemStoragePostgresReplicas>> as SystemStoragePostgresReplicas
+    rectangle "Кэш\n<size:10>[[Redis Cluster]]</size>\n\nРаспределённый кэш Cache-Aside (профили, сессии, результаты запросов, rate limit)" <<SystemStorageCache>> as SystemStorageCache
+    database "Хранилище бэкапов\n<size:10>[[MinIO]]</size>\n\nОтдельное хранилище: полные снимки и WAL-архив (PITR); другой регион/аккаунт. Retention ≥30 дней (2.13)." <<SystemStorageBackupStorage>> as SystemStorageBackupStorage
   }
 }
 
-SystemBackend .[#6366f1,thickness=2].> SystemStorageDatabase : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
+SystemBackend .[#6366f1,thickness=2].> SystemStoragePostgresMaster : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
+SystemBackend .[#6366f1,thickness=2].> SystemStoragePostgresReplicas : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackend .[#6366f1,thickness=2].> SystemStorageCache : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
-SystemMonitoring .[#6366f1,thickness=2].> SystemStorageDatabase : <color:#6366f1>[...]
+SystemMonitoring .[#6366f1,thickness=2].> SystemStoragePostgresMaster : <color:#6366f1>[...]
+SystemMonitoring .[#6366f1,thickness=2].> SystemStoragePostgresReplicas : <color:#6366f1>[...]
 SystemMonitoring .[#6366f1,thickness=2].> SystemStorageCache : <color:#6366f1>[...]
+SystemStoragePostgresMaster .[#15803d,thickness=2].> SystemStorageBackupStorage : <color:#15803d>Репликация бэкапов: полный снимок, \n<color:#15803d>WAL-архив (PITR)\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemStorageCache .[#6366f1,thickness=2].> SystemStorageBackupStorage : <color:#6366f1>RDB/AOF снимки (опционально)\n<size:8>[<color:#6366f1>TCP]</size>
 @enduml

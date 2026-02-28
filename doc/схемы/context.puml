@@ -75,7 +75,7 @@ rectangle "Система" <<System>> as System {
   rectangle "api-gateway\n<size:10>[[Spring Cloud Gateway]]</size>\n\nМаршрутизация API, аутентификация, авторизация, rate limiting" <<SystemApiGateway>> as SystemApiGateway
   rectangle "Обработка пользовательских запросов\n<size:10>[[Spring Boot]]</size>\n\nМикросервисы: пользователи, запросы, платежи, уведомления, аудит" <<SystemBackend>> as SystemBackend
   rectangle "iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management" <<SystemIam>> as SystemIam
-  rectangle "Хранение данных\n\nБД и кэш" <<SystemStorage>> as SystemStorage
+  rectangle "Хранение данных\n\nБД (master + read replicas), кэш, хранилище бэкапов. Запись — в master, чтение — с реплик (2.13, 2.14)." <<SystemStorage>> as SystemStorage
   queue "Event Bus\n<size:10>[[Apache Kafka]]</size>\n\nАсинхронные события между сервисами" <<SystemEventBus>> as SystemEventBus
 }
 rectangle "Внешние системы\n\nВнешние системы" <<System_ext>> as System_ext
