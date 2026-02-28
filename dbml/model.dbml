@@ -1,0 +1,284 @@
+// Модель данных (Database per Service). Источник: doc/2.06
+// Просмотр: https://dbdiagram.io/d — вставить содержимое файла
+
+Project system_design {
+  database_type: 'PostgreSQL'
+  Note: 'Микросервисы: users_db, requests_db, payments_db, notifications_db, audit_db, monitoring'
+}
+
+// ---- users_db (User Service) ----
+Table users {
+  user_id uuid [pk]
+  external_id varchar(255) [unique, not null]
+  email varchar(255) [unique, not null]
+  username varchar(100) [unique, not null]
+  first_name varchar(100)
+  last_name varchar(100)
+  phone varchar(20)
+  status varchar(20) [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  last_login_at timestamp
+  metadata json
+  version integer [not null]
+}
+
+Table user_roles {
+  role_id uuid [pk]
+  user_id uuid [not null]
+  role_name varchar(50) [not null]
+  granted_at timestamp [not null]
+  granted_by uuid
+  expires_at timestamp
+}
+
+Table user_sessions {
+  session_id uuid [pk]
+  user_id uuid [not null]
+  access_token_hash varchar(255) [not null]
+  refresh_token_hash varchar(255)
+  ip_address varchar(45)
+  user_agent text
+  created_at timestamp [not null]
+  expires_at timestamp [not null]
+  revoked_at timestamp
+  is_active boolean [not null]
+}
+
+Table user_permissions {
+  permission_id uuid [pk]
+  user_id uuid [not null]
+  resource_type varchar(100) [not null]
+  resource_id uuid
+  permission_type varchar(50) [not null]
+  granted_at timestamp [not null]
+  expires_at timestamp
+}
+
+// ---- requests_db (Request Processing Service) ----
+Table user_requests {
+  request_id uuid [pk]
+  user_id uuid [not null]
+  request_type varchar(50) [not null]
+  status varchar(30) [not null]
+  priority integer [not null]
+  request_data json [not null]
+  result_data json
+  error_message text
+  error_code varchar(50)
+  created_at timestamp [not null]
+  started_at timestamp
+  completed_at timestamp
+  processing_time_ms integer
+  retry_count integer [not null]
+  max_retries integer [not null]
+  metadata json
+  version integer [not null]
+}
+
+Table request_history {
+  history_id uuid [pk]
+  request_id uuid [not null]
+  status varchar(30) [not null]
+  changed_by uuid
+  changed_at timestamp [not null]
+  comment text
+  metadata json
+}
+
+Table request_attachments {
+  attachment_id uuid [pk]
+  request_id uuid [not null]
+  file_name varchar(255) [not null]
+  file_size long [not null]
+  content_type varchar(100)
+  storage_path varchar(500) [not null]
+  uploaded_at timestamp [not null]
+  uploaded_by uuid [not null]
+}
+
+// ---- payments_db (Payment Service) ----
+Table payment_transactions {
+  transaction_id uuid [pk]
+  user_id uuid [not null]
+  request_id uuid
+  external_transaction_id varchar(255) [unique]
+  amount decimal [not null]
+  currency varchar(3) [not null]
+  status varchar(30) [not null]
+  payment_method varchar(50) [not null]
+  payment_provider varchar(50) [not null]
+  description text
+  metadata json
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  completed_at timestamp
+  expires_at timestamp
+  version integer [not null]
+}
+
+Table payment_history {
+  history_id uuid [pk]
+  transaction_id uuid [not null]
+  status varchar(30) [not null]
+  changed_at timestamp [not null]
+  changed_by varchar(100)
+  external_status_code varchar(50)
+  external_status_message text
+  metadata json
+}
+
+Table payment_refunds {
+  refund_id uuid [pk]
+  transaction_id uuid [not null]
+  amount decimal [not null]
+  reason text
+  status varchar(30) [not null]
+  external_refund_id varchar(255)
+  created_at timestamp [not null]
+  completed_at timestamp
+  metadata json
+}
+
+Table payment_outbox {
+  outbox_id uuid [pk]
+  transaction_id uuid [not null]
+  event_type varchar(100) [not null]
+  event_data json [not null]
+  status varchar(20) [not null]
+  retry_count integer [not null]
+  created_at timestamp [not null]
+  processed_at timestamp
+  next_retry_at timestamp
+}
+
+// ---- notifications_db (Notification Service) ----
+Table notifications {
+  notification_id uuid [pk]
+  user_id uuid [not null]
+  request_id uuid
+  transaction_id uuid
+  notification_type varchar(50) [not null]
+  channel varchar(50) [not null]
+  subject varchar(255)
+  message text [not null]
+  status varchar(30) [not null]
+  priority integer [not null]
+  scheduled_at timestamp
+  sent_at timestamp
+  delivered_at timestamp
+  external_message_id varchar(255)
+  error_message text
+  retry_count integer [not null]
+  max_retries integer [not null]
+  metadata json
+  created_at timestamp [not null]
+  version integer [not null]
+}
+
+Table notification_templates {
+  template_id uuid [pk]
+  template_name varchar(100) [unique, not null]
+  notification_type varchar(50) [not null]
+  subject_template text
+  message_template text [not null]
+  variables json
+  is_active boolean [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table notification_outbox {
+  outbox_id uuid [pk]
+  notification_id uuid [not null]
+  event_type varchar(100) [not null]
+  event_data json [not null]
+  status varchar(20) [not null]
+  retry_count integer [not null]
+  created_at timestamp [not null]
+  processed_at timestamp
+  next_retry_at timestamp
+}
+
+// ---- audit_db (Audit Service) ----
+Table audit_logs {
+  log_id uuid [pk]
+  user_id uuid
+  session_id uuid
+  service_name varchar(100) [not null]
+  action varchar(100) [not null]
+  resource_type varchar(100) [not null]
+  resource_id uuid
+  request_id uuid
+  ip_address varchar(45)
+  user_agent text
+  request_data json
+  response_data json
+  status_code integer
+  error_message text
+  duration_ms integer
+  created_at timestamp [not null]
+}
+
+Table security_events {
+  event_id uuid [pk]
+  event_type varchar(50) [not null]
+  user_id uuid
+  ip_address varchar(45) [not null]
+  user_agent text
+  severity varchar(20) [not null]
+  description text [not null]
+  metadata json
+  created_at timestamp [not null]
+}
+
+// ---- monitoring ----
+Table system_metrics {
+  metric_id long [pk]
+  service_name varchar(100) [not null]
+  metric_name varchar(200) [not null]
+  metric_value decimal [not null]
+  metric_type varchar(50) [not null]
+  labels json
+  timestamp timestamp [not null]
+}
+
+Table health_checks {
+  check_id uuid [pk]
+  service_name varchar(100) [not null]
+  check_type varchar(50) [not null]
+  status varchar(20) [not null]
+  response_time_ms integer
+  error_message text
+  metadata json
+  checked_at timestamp [not null]
+}
+
+Table alerts {
+  alert_id uuid [pk]
+  alert_name varchar(200) [not null]
+  service_name varchar(100)
+  severity varchar(20) [not null]
+  status varchar(20) [not null]
+  description text [not null]
+  metric_name varchar(200)
+  threshold_value decimal
+  current_value decimal
+  started_at timestamp [not null]
+  resolved_at timestamp
+  acknowledged_by uuid
+  acknowledged_at timestamp
+  metadata json
+}
+
+// Связи (Ref) — только внутри одной БД (FK)
+Ref: user_roles.user_id > users.user_id
+Ref: user_roles.granted_by > users.user_id
+Ref: user_sessions.user_id > users.user_id
+Ref: user_permissions.user_id > users.user_id
+Ref: request_history.request_id > user_requests.request_id
+Ref: request_attachments.request_id > user_requests.request_id
+Ref: payment_history.transaction_id > payment_transactions.transaction_id
+Ref: payment_refunds.transaction_id > payment_transactions.transaction_id
+Ref: payment_outbox.transaction_id > payment_transactions.transaction_id
+Ref: notification_outbox.notification_id > notifications.notification_id
