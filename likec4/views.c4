@@ -49,7 +49,7 @@ views {
 
     view db_container of system.storage {
         title 'System/Хранение данных/Контейрная диаграмма'
-        description 'Описание системы хранения данных'
+        description 'PostgreSQL: запись в master, чтение с read replicas (2.13). Кэш Redis (Cache-Aside). Репликация бэкапов в отдельное хранилище (WAL, полный снимок, PITR).'
 
         include *,
                 system

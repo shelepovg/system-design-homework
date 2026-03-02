@@ -113,18 +113,27 @@ model{
         }
 
         storage = system 'Хранение данных' {
-            summary 'БД и кэш'
+            summary 'БД (master + read replicas), кэш, хранилище бэкапов. Запись — в master, чтение — с реплик (2.13, 2.14).'
             icon bootstrap:database
 
-            database = database 'База данных' {
+            postgres-master = database 'PostgreSQL (master)' {
                 technology '[PostgreSQL]'
-                summary 'Database per Service: users_db, requests_db, payments_db, notifications_db, audit_db'
+                summary 'Единая точка записи: users_db, requests_db, payments_db, notifications_db, audit_db. Синхронная репликация на read replicas; RPO=0.'
+                icon tech:postgresql
+            }
+            postgres-replicas = database 'PostgreSQL (read replicas)' {
+                technology '[PostgreSQL]'
+                summary 'Чтение только с реплик (streaming replication). Масштабирование чтения; ~28K RPS при cache hit 80% (2.07).'
                 icon tech:postgresql
             }
             cache = container 'Кэш' {
-                summary 'Распределённый кэш (Cache-Aside, Write-Through)'
+                summary 'Распределённый кэш Cache-Aside (профили, сессии, результаты запросов, rate limit)'
                 technology '[Redis Cluster]'
                 icon tech:redis
+            }
+            backup-storage = object_storage 'Хранилище бэкапов' {
+                summary 'Отдельное хранилище: полные снимки и WAL-архив (PITR); другой регион/аккаунт. Retention ≥30 дней (2.13).'
+                technology '[MinIO]'
             }
         }
 
@@ -221,20 +230,30 @@ model{
     // User Service → IAM (синхронизация пользователей и сессий с Keycloak)
     user-service -[https]-> iam 'Синхронизация пользователей, ролей и сессий с Keycloak' 'HTTPS, REST, JSON; OAuth2/OIDC' { #sync }
 
-    // Микросервисы → БД, кэш, Event Bus, внешние системы (протоколы: tcp для JDBC/Redis/Kafka, https для внешних API)
-    user-service -[tcp]-> database 'Чтение/запись users, sessions, roles' 'TCP, JDBC, PostgreSQL' { #sync }
+    // Микросервисы → БД (запись в master, чтение с реплик — 2.13), кэш, Event Bus, внешние системы
+    user-service -[tcp]-> postgres-master 'Запись: users, sessions, roles' 'TCP, JDBC, PostgreSQL' { #sync }
+    user-service -[tcp]-> postgres-replicas 'Чтение: users, sessions, roles (с реплик)' 'TCP, JDBC, PostgreSQL' { #sync }
     user-service -[tcp]-> cache 'Профили, сессии (Cache-Aside)' 'TCP, Redis RESP' { #sync }
-    request-processing-service -[tcp]-> database 'Запросы, история, вложения' 'TCP, JDBC, PostgreSQL' { #sync }
+    request-processing-service -[tcp]-> postgres-master 'Запись: запросы, история, вложения' 'TCP, JDBC, PostgreSQL' { #sync }
+    request-processing-service -[tcp]-> postgres-replicas 'Чтение: запросы, история (с реплик)' 'TCP, JDBC, PostgreSQL' { #sync }
     request-processing-service -[tcp]-> cache 'Результаты запросов (Cache-Aside)' 'TCP, Redis RESP' { #sync }
     request-processing-service -[tcp]-> event-bus 'Публикация событий (уведомления, аудит)' 'TCP, Kafka Protocol, JSON' { #async }
-    payment-service -[tcp]-> database 'Транзакции, outbox' 'TCP, JDBC, PostgreSQL' { #sync }
+    payment-service -[tcp]-> postgres-master 'Запись: транзакции, outbox' 'TCP, JDBC, PostgreSQL' { #sync }
+    payment-service -[tcp]-> postgres-replicas 'Чтение: транзакции, история (с реплик)' 'TCP, JDBC, PostgreSQL' { #sync }
     payment-service -[tcp]-> event-bus 'События платежей (уведомления, аудит)' 'TCP, Kafka Protocol, JSON' { #async }
     payment-service -[https]-> payment 'Инициация платежа; приём Webhook' 'HTTPS, REST, JSON' { #sync }
     notification-service -[tcp]-> event-bus 'Потребление событий уведомлений' 'TCP, Kafka Protocol, JSON' { #async }
-    notification-service -[tcp]-> database 'Статусы доставки' 'TCP, JDBC, PostgreSQL' { #sync }
+    notification-service -[tcp]-> postgres-master 'Запись: статусы доставки' 'TCP, JDBC, PostgreSQL' { #sync }
+    notification-service -[tcp]-> postgres-replicas 'Чтение: уведомления, шаблоны (с реплик)' 'TCP, JDBC, PostgreSQL' { #sync }
     notification-service -[https]-> notification 'Отправка (Email, SMS, Push)' 'HTTPS, REST; SMTP' { #async }
     audit-service -[tcp]-> event-bus 'Потребление событий аудита' 'TCP, Kafka Protocol, JSON' { #async }
-    audit-service -[tcp]-> database 'Запись аудит-логов' 'TCP, JDBC, PostgreSQL' { #sync }
+    audit-service -[tcp]-> postgres-master 'Запись: аудит-логи' 'TCP, JDBC, PostgreSQL' { #sync }
+    audit-service -[tcp]-> postgres-replicas 'Чтение: аудит (с реплик, расследования)' 'TCP, JDBC, PostgreSQL' { #sync }
+
+    // Репликация бэкапов в отдельное хранилище (2.13: полный снимок, WAL-архив, PITR)
+    postgres-master -[https]-> backup-storage 'Репликация бэкапов: полный снимок, WAL-архив (PITR)' 'WAL archive, S3-совместимый API' { #async }
+    cache -[tcp]-> backup-storage 'RDB/AOF снимки (опционально)' 'Периодический снимок в объектное хранилище' { #async }
+
     // Мониторинг: сбор логов (Fluent Bit — file tail / Forward по TCP)
     monitoring.log-collector -[tcp]-> load-balancer 'Сбор access/error логов Nginx' 'TCP, Fluent Bit Forward 24224 / file tail' { #async }
     monitoring.log-collector -[tcp]-> front 'Сбор логов веб-сервера и SPA' 'TCP, Fluent Bit Forward 24224 / file tail' { #async }
@@ -244,7 +263,8 @@ model{
     monitoring.log-collector -[tcp]-> payment-service 'Сбор логов приложения' 'TCP, Fluent Bit Forward 24224' { #async }
     monitoring.log-collector -[tcp]-> notification-service 'Сбор логов приложения' 'TCP, Fluent Bit Forward 24224' { #async }
     monitoring.log-collector -[tcp]-> audit-service 'Сбор логов приложения' 'TCP, Fluent Bit Forward 24224' { #async }
-    monitoring.log-collector -[tcp]-> database 'Сбор логов PostgreSQL' 'TCP, Fluent Bit Forward 24224 / file tail' { #async }
+    monitoring.log-collector -[tcp]-> postgres-master 'Сбор логов PostgreSQL (master)' 'TCP, Fluent Bit Forward 24224 / file tail' { #async }
+    monitoring.log-collector -[tcp]-> postgres-replicas 'Сбор логов PostgreSQL (replicas)' 'TCP, Fluent Bit Forward 24224 / file tail' { #async }
     monitoring.log-collector -[tcp]-> cache 'Сбор логов Redis' 'TCP, Fluent Bit Forward 24224' { #async }
     monitoring.log-collector -[tcp]-> event-bus 'Сбор логов Kafka' 'TCP, Fluent Bit Forward 24224' { #async }
     monitoring.log-collector -[tcp]-> iam 'Сбор логов Keycloak/IAM' 'TCP, Fluent Bit Forward 24224 / file tail' { #async }
@@ -258,7 +278,8 @@ model{
     monitoring.metrics-collector -[http]-> payment-service 'Скрейпинг метрик' 'HTTP GET /actuator/prometheus, порт 8080' { #sync }
     monitoring.metrics-collector -[http]-> notification-service 'Скрейпинг метрик' 'HTTP GET /actuator/prometheus, порт 8080' { #sync }
     monitoring.metrics-collector -[http]-> audit-service 'Скрейпинг метрик' 'HTTP GET /actuator/prometheus, порт 8080' { #sync }
-    monitoring.metrics-collector -[http]-> database 'Сбор метрик PostgreSQL' 'HTTP GET /metrics, postgres_exporter 9187' { #sync }
+    monitoring.metrics-collector -[http]-> postgres-master 'Сбор метрик PostgreSQL (master)' 'HTTP GET /metrics, postgres_exporter 9187' { #sync }
+    monitoring.metrics-collector -[http]-> postgres-replicas 'Сбор метрик PostgreSQL (read replicas)' 'HTTP GET /metrics, postgres_exporter 9187' { #sync }
     monitoring.metrics-collector -[http]-> cache 'Сбор метрик Redis' 'HTTP GET /metrics, redis-exporter 9121' { #sync }
     monitoring.metrics-collector -[http]-> event-bus 'Сбор метрик Kafka' 'HTTP/JMX, JMX Exporter 9999' { #sync }
     monitoring.metrics-collector -[http]-> iam 'Сбор метрик Keycloak/IAM' 'HTTP GET /metrics, порт 9090' { #sync }

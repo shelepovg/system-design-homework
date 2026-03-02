@@ -87,7 +87,7 @@ rectangle "Система" <<System>> as System {
     rectangle "Audit Service\n<size:10>[[Spring Boot]]</size>\n\nАудит операций и безопасности" <<SystemBackendAuditService>> as SystemBackendAuditService
   }
   rectangle "iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management" <<SystemIam>> as SystemIam
-  rectangle "Хранение данных\n\nБД и кэш" <<SystemStorage>> as SystemStorage
+  rectangle "Хранение данных\n\nБД (master + read replicas), кэш, хранилище бэкапов. Запись — в master, чтение — с реплик (2.13, 2.14)." <<SystemStorage>> as SystemStorage
   queue "Event Bus\n<size:10>[[Apache Kafka]]</size>\n\nАсинхронные события между сервисами" <<SystemEventBus>> as SystemEventBus
 }
 rectangle "Внешние системы\n\nВнешние системы" <<System_ext>> as System_ext
@@ -97,12 +97,12 @@ SystemBackendUserService .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1
 SystemBackendRequestProcessingService .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendRequestProcessingService .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>Публикация событий (уведомления, аудит)\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendPaymentService .[#15803d,thickness=2].> System_ext : <color:#15803d>Инициация платежа; приём Webhook\n<size:8>[<color:#15803d>HTTPS]</size>
-SystemBackendPaymentService .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>Транзакции, outbox\n<size:8>[<color:#6366f1>TCP]</size>
+SystemBackendPaymentService .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendPaymentService .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>События платежей (уведомления, аудит)\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendNotificationService .[#15803d,thickness=2].> System_ext : <color:#15803d>Отправка (Email, SMS, Push)\n<size:8>[<color:#15803d>HTTPS]</size>
-SystemBackendNotificationService .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>Статусы доставки\n<size:8>[<color:#6366f1>TCP]</size>
+SystemBackendNotificationService .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendNotificationService .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>Потребление событий уведомлений\n<size:8>[<color:#6366f1>TCP]</size>
-SystemBackendAuditService .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>Запись аудит-логов\n<size:8>[<color:#6366f1>TCP]</size>
+SystemBackendAuditService .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendAuditService .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>Потребление событий аудита\n<size:8>[<color:#6366f1>TCP]</size>
 SystemApiGateway .[#6366f1,thickness=2].> SystemBackendUserService : <color:#6366f1>Маршрутизация /api/users, профиль, \n<color:#6366f1>сессии\n<size:8>[<color:#6366f1>HTTP]</size>
 SystemApiGateway .[#6366f1,thickness=2].> SystemBackendRequestProcessingService : <color:#6366f1>Маршрутизация /api/requests\n<size:8>[<color:#6366f1>HTTP]</size>
