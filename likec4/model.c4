@@ -6,14 +6,20 @@ model{
         web = container "Web (браузер)" {
             summary 'Подключение по браузеру'
             technology 'HTTP/1.1, HTTP/2'
+            icon tech:chrome
+            description 'Клиентский доступ к системе через веб-браузер. Загрузка SPA, вызовы API по HTTP/1.1 или HTTP/2.'
         }
         android = container "Android" {
             summary 'Мобильное приложение'
             technology 'HTTP/1.1, HTTP/2, WebSocket'
+            icon tech:android
+            description 'Нативное или гибридное приложение на Android. API и push-уведомления через WebSocket.'
         }
         ios = container "iOS" {
             summary 'Мобильное приложение'
             technology 'HTTP/1.1, HTTP/2, WebSocket'
+            icon tech:apple
+            description 'Нативное или гибридное приложение на iOS. API и push-уведомления через WebSocket.'
         }
     }
     system = system 'Система'{
@@ -134,12 +140,16 @@ model{
             backup-storage = object_storage 'Хранилище бэкапов' {
                 summary 'Отдельное хранилище: полные снимки и WAL-архив (PITR); другой регион/аккаунт. Retention ≥30 дней (2.13).'
                 technology '[MinIO]'
+                icon bootstrap:hdd-stack
+                description 'S3-совместимое объектное хранилище для полных снимков БД, WAL-архива (PITR) и опциональных снимков Redis.'
             }
         }
 
         event-bus = queue 'Event Bus' {
             summary 'Асинхронные события между сервисами'
             technology '[Apache Kafka]'
+            icon tech:kafka
+            description 'Центральная шина событий: уведомления, аудит, платежи. Публикация/подписка по топикам; at-least-once доставка.'
         }    
         monitoring = system 'Система мониторинга' {
             summary 'Сбор логов и метрик, обработка, хранение, дашборды и алертинг'
@@ -149,7 +159,8 @@ model{
             log-collector = container 'Сбор логов' {
                 summary 'Агенты на узлах: сбор и пересылка логов с сервисов'
                 technology '[Fluent Bit]'
-                // icon tech:fluentbit
+                icon bootstrap:collection
+                description 'Леговесные агенты на узлах/под: сбор логов (файлы, stdout), пересылка в шину логов (Kafka). Низкое потребление ресурсов.'
             }
             log-bus = queue 'Шина логов' {
                 summary 'Буфер и поток логов, сглаживание пиков'
@@ -181,11 +192,14 @@ model{
             metrics-storage = container 'Хранилище метрик' {
                 summary 'Временные ряды, retention (real-time / 7 дней / 90 дней)'
                 technology 'Prometheus TSDB / VictoriaMetrics'
-                // icon tech:victoriametrics
+                icon tech:prometheus
+                description 'Хранилище временных рядов метрик. Retention: real-time, 7 и 90 дней. PromQL-запросы для дашбордов и правил алертов.'
             }
             alerting = container 'Алертинг' {
                 summary 'Правила алертов, группировка, уведомления (PagerDuty, Slack, Email)'
                 technology '[Grafana Alerting]'
+                icon bootstrap:bell
+                description 'Вычисление правил алертов по метрикам, группировка и дедупликация, маршрутизация уведомлений в PagerDuty, Slack, Email.'
             }
         }
 

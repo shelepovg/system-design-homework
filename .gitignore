@@ -3,3 +3,6 @@
 /dist/
 /.vscode
 /doc/images/*.cmapx
+/node_modules
+node_modules/*
+node_modules
