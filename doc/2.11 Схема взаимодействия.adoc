@@ -9,9 +9,23 @@
   * Формат: REST API (JSON), статика — HTML/CSS/JS.
   * Порт: 443 (HTTPS), 80 — редирект на 443.
 
+==== Настройки TLS на edge (HSTS, PFS) и граница доверенной сети
+
+*Настройки на Load Balancer / edge (обязательные для соответствия NFR-005 и 3.03):*
+
+  * *Версия протокола:* только TLS 1.2 и TLS 1.3; TLS 1.0/1.1 отключены (например, Nginx: `ssl_protocols TLSv1.2 TLSv1.3;`).
+  * *Perfect Forward Secrecy (PFS):* только наборы шифров с ephemeral key exchange (ECDHE или DHE). Для TLS 1.3 — стандартные наборы (TLS_AES_256_GCM_SHA384, TLS_CHACHA20_POLY1305_SHA256, TLS_AES_128_GCM_SHA256). Для TLS 1.2 — например ECDHE-RSA-AES256-GCM-SHA384, ECDHE-RSA-CHACHA20-POLY1305; статический RSA key exchange отключён.
+  * *HSTS (HTTP Strict Transport Security):* заголовок на всех ответах edge (LB/Front): `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`. Редирект 80 → 443 сохраняется для первого захода; после ответа с HSTS браузер использует только HTTPS.
+  * *Сертификаты:* доверенный CA, срок жизни не более 13 месяцев, автоматическое продление (ACME или корпоративный PKI).
+
+*Граница доверенной сети (внутренний трафик):*
+
+  * *Доверенный периметр:* сегмент «Load Balancer → Frontend, API Gateway → Backend (микросервисы), микросервисы → PostgreSQL, Redis, Kafka» считается *доверенной сетью* при выполнении условий: изоляция сети (segmentación), контроль доступа (security groups / firewall deny-by-default), отсутствие доступа из ненадёжных сетей к этому сегменту. В этом случае требование NFR-005 «TLS 1.3 для всех сетевых соединений» трактуется как применение TLS ко всем соединениям *из ненадёжных сетей* (клиент–LB, API Gateway–IAM, Backend–внешние системы).
+  * *Внутри периметра:* протокол HTTP/1.1 или HTTP/2 без TLS допускается; при ужесточении политики (платежи, персональные данные) — включение TLS 1.3 или mTLS на внутренних каналах по отдельному решению.
+
 *API Gateway → Backend (микросервисы):*
   * Маршрутизация по пути и заголовкам (например, /api/users → User Service, /api/requests → Request Processing Service, /api/payments → Payment Service).
-  * Протокол: HTTP/1.1 или HTTP/2 (внутренняя сеть), TLS опционально внутри периметра.
+  * Протокол: HTTP/1.1 или HTTP/2 (внутренняя сеть в доверенном периметре); TLS внутри периметра — см. «Граница доверенной сети» выше.
   * Формат: JSON (REST), заголовки: X-User-Id, X-Request-Id, X-Trace-Id (сквозная трассировка).
   * Тип: синхронный запрос-ответ; таймаут и retry настраиваются на уровне Gateway и клиента.
 
