@@ -1,0 +1,15 @@
+# Пример конфигурации Database Secrets Engine для PostgreSQL (3.04).
+# Использование: скопировать в database-postgres.hcl, подставить реальные connection_url и credentials,
+# затем: vault write database/config/users-db @database-postgres.hcl (для каждого БД: users-db, requests-db, ...).
+# Ротация мастер-учётной записи БД — по регламенту (90 дней); обновить здесь и в PostgreSQL.
+
+plugin_name = "postgresql-database-plugin"
+allowed_roles = ["users-db"]
+
+connection_url = "postgresql://{{username}}:{{password}}@postgres-master.example.com:5432/users_db?sslmode=require"
+# Или с плейсхолдером для статического пароля, хранящегося в Vault:
+# connection_url = "postgresql://vault_admin:${env:PG_VAULT_ADMIN_PASSWORD}@postgres-master:5432/users_db"
+
+# Для каждой БД создаётся отдельный config: users-db, requests-db, payments-db, notifications-db, audit-db.
+# Роли (role) задают имя пользователя и TTL:
+#   vault write database/roles/users-db role_name="users-db" db_name="users-db" creation_statements="..." default_ttl="1h" max_ttl="24h"
