@@ -35,6 +35,43 @@ image::images/access_control_rbac.png[Схема архитектуры упра
 
 Таким образом, выдача централизована в IAM, проверка — на периметре в API Gateway с опорой на JWT и JWKS, без обязательного вызова IAM на каждый запрос.
 
+==== Схема процессов аутентификации и авторизации
+
+Ниже — упрощённая схема потоков: первичный вход (логин), проверка доступа при запросе к API и обновление токена. Пометки *sync* и *async* соответствуют модели LikeC4; события 401/403 и логина публикуются в Event Bus для Audit Service (3.02).
+
+[source,text]
+----
+Client (Web / Android / iOS)
+   │
+   ├──sync──► Load Balancer
+   │              │
+   │              └──sync──► API Gateway
+   │                             │
+   │                             ├── [Логин] sync──► IAM внешний (Authorization Code + PKCE)
+   │                             │              │    redirect на IAM → ввод учётных данных → redirect с code
+   │                             │              │    обмен code + code_verifier → access_token (JWT) + refresh_token
+   │                             │              ├──sync──► Frontend: передача токенов в secure storage
+   │                             │              └──async──► Event Bus (security.events): LOGIN_SUCCESS / LOGIN_FAILURE
+   │                             │
+   │                             ├── [Запрос с JWT] проверка Authorization: Bearer <token>
+   │                             │              ├──sync──► кэш JWT (Redis) или IAM (JWKS): валидация подписи, exp, iss, aud; извлечение sub, ролей
+   │                             │              │    при успехе:
+   │                             │              ├──sync──► User Service / Request Processing / Payment / Notification (с контекстом user_id, роли; RBAC)
+   │                             │              │    при 401 или 403:
+   │                             │              └──async──► Event Bus (security.events): UNAUTHORIZED_ACCESS → Audit Service
+   │                             │
+   │                             ├── [Refresh токена] sync──► IAM внешний (grant_type=refresh_token)
+   │                             │              │    при успехе: новая пара access_token + refresh_token → клиент
+   │                             │              └── при неуспехе: 401 → клиент перенаправляется на логин
+   │                             │
+   │                             └── sync──► IAM (Keycloak): JWKS для проверки подписи JWT; кэш JWKS на Gateway
+   │
+   User Service ──sync──► IAM (синхронизация пользователей, сессий, ролей; при назначении/снятии роли — публикация в audit.events)
+   User Service ──sync──► Redis (кэш профилей, сессий; при отзыве токена — чёрный список или флаг сессии)
+----
+
+*Примечание.* Логин для SPA/мобильных идёт через IAM внешний (OAuth2/OIDC); при использовании внутреннего Keycloak без внешнего IdP связь «API Gateway → IAM внешний» заменяется на «API Gateway → IAM (Keycloak)». Проверка прав (RBAC) выполняется на API Gateway по ролям из JWT и при необходимости детально в сервисе (проверка владельца ресурса).
+
 ==== Архитектура экспирации и обновления токенов
 
 *Сроки жизни (согласовано с FR-002):*
