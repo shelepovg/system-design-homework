@@ -84,6 +84,57 @@
 
 *Политики доступа (ACL):* для каждого сервиса (AppRole) задаётся минимальный набор путей: только те секреты, которые нужны этому сервису. Пример: Payment Service — только `secret/prod/payment`, `database/creds/payments-db`, при необходимости `secret/prod/kafka`. Отказ по умолчанию для всех остальных путей.
 
+==== Схема хранения и ротации секретов
+
+Ниже — упрощённая схема потоков: получение секретов сервисами при старте, ротация (динамические и статические секреты) и аудит. Пометки *sync* и *async* по аналогии с 2.11.
+
+[source,text]
+----
+Vault (HashiCorp Vault)
+   │
+   ├── [Получение при старте] AppRole / K8s Auth → ограниченный токен по path
+   │              │
+   │              ├──sync──► API Gateway
+   │              │              secret/prod/iam (client_id, client_secret Keycloak), при необходимости rate-limit
+   │              │
+   │              ├──sync──► User Service
+   │              │              database/creds/users-db, secret/prod/redis, secret/prod/kafka, secret/prod/iam
+   │              │
+   │              ├──sync──► Request Processing Service
+   │              │              database/creds/requests-db, secret/prod/redis, secret/prod/kafka
+   │              │
+   │              ├──sync──► Payment Service
+   │              │              database/creds/payments-db, secret/prod/kafka, secret/prod/payment (API key, webhook secret)
+   │              │
+   │              ├──sync──► Notification Service
+   │              │              database/creds/notifications-db, secret/prod/kafka, secret/prod/notification
+   │              │
+   │              └──sync──► Audit Service
+   │                             database/creds/audit-db, secret/prod/kafka
+   │
+   ├── [Ротация статических секретов] не реже 90 дней; высокорисковые — по регламенту
+   │              │
+   │              ├──sync──► Оператор / CI/CD: создание нового секрета (провайдер, Redis, Kafka, IAM и т.д.)
+   │              │              │
+   │              │              ├──sync──► Vault (KV v2): запись новой версии по path; при необходимости две версии для плавного переключения
+   │              │              │
+   │              │              └── перезапуск сервисов или Vault Agent / перечитывание по TTL → потребители подхватывают новую версию
+   │              │
+   │              └── после перехода: деактивация или удаление старой версии в Vault
+   │
+   ├── [Динамические секреты, БД] Database engine
+   │              │    Vault генерирует краткосрочные creds (TTL, напр. 1 ч); по истечении — аннулирование в БД
+   │              │    Ротация встроена: при следующем запросе сервис получает новые credentials
+   │              │
+   │              └──sync──► Сервисы (User, Request Processing, Payment, Notification, Audit): запрос при старте или по истечении TTL
+   │
+   └──async──► Аудит-лог Vault (чтение, обновление, создание секретов)
+                  │    пересылка в централизованное хранилище логов (2.09, 3.02)
+                  └──► Elasticsearch / Loki / SIEM
+----
+
+*Примечание.* Секреты не записываются в конфигурационные файлы в репозитории; приложение получает их из Vault при старте (Spring Cloud Vault, Vault Agent). Ротация мастер-учётной записи БД (которой Vault создаёт динамических пользователей) — по регламенту (напр. 90 дней); ключи Transit — версионирование и перешифрование по политике (2.13, NFR-005).
+
 ==== Процесс ротации секретов
 
 *Динамические секреты (PostgreSQL через Database engine):*
