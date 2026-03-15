@@ -55,4 +55,26 @@ views {
                 system
 
     }
+
+    view access_control_rbac of system {
+        title 'System/Схема архитектуры управления доступами с RBAC'
+        description 'Аутентификация (JWT, IAM), авторизация (RBAC на API Gateway и User Service), аудит безопасности (события 401/403, логин, роли → Event Bus → Audit Service), хранение секретов (Vault). Связь с 3.01, 3.02, 3.04.'
+
+        include users,
+                users.*,
+                system,
+                system.load-balancer,
+                system.front,
+                system.api-gateway,
+                system.iam,
+                system.backend.user-service,
+                system.backend.audit-service,
+                system.storage.cache,
+                system.storage.postgres-master,
+                system.event-bus,
+                system.secrets-vault,
+                system.monitoring.alerting,
+                system_ext,
+                system_ext.iam_ext
+    }
 }

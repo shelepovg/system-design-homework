@@ -1,0 +1,155 @@
+@startuml
+title "Схема архитектуры управления доступами с RBAC"
+top to bottom direction
+
+hide stereotype
+skinparam ranksep 60
+skinparam nodesep 30
+skinparam {
+  arrowFontSize 10
+  defaultTextAlignment center
+  wrapWidth 200
+  maxMessageSize 100
+  shadowing false
+}
+
+skinparam rectangle<<UsersWeb>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<UsersAndroid>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<UsersIos>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemLoadBalancer>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemFront>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemApiGateway>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemMonitoringAlerting>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemBackendUserService>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemBackendAuditService>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<System_extIam_ext>>{
+  BackgroundColor #827a8e
+  FontColor #ffffff
+  BorderColor #6c6477
+}
+skinparam rectangle<<SystemIam>>{
+  BackgroundColor #2b85e7
+  FontColor #f1ffff
+  BorderColor #1e73ce
+}
+skinparam queue<<SystemEventBus>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemSecretsVault>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemStorageCache>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam database<<SystemStoragePostgresMaster>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+rectangle "Пользователи" <<Users>> as Users {
+  skinparam RectangleBorderColor<<Users>> #2b85e7
+  skinparam RectangleFontColor<<Users>> #2b85e7
+  skinparam RectangleBorderStyle<<Users>> dashed
+
+  rectangle "==Web (браузер)\n<size:10>[HTTP/1.1, HTTP/2]</size>\n\nПодключение по браузеру" <<UsersWeb>> as UsersWeb
+  rectangle "==Android\n<size:10>[HTTP/1.1, HTTP/2, WebSocket]</size>\n\nМобильное приложение" <<UsersAndroid>> as UsersAndroid
+  rectangle "==iOS\n<size:10>[HTTP/1.1, HTTP/2, WebSocket]</size>\n\nМобильное приложение" <<UsersIos>> as UsersIos
+}
+rectangle "Система" <<System>> as System {
+  skinparam RectangleBorderColor<<System>> #2b85e7
+  skinparam RectangleFontColor<<System>> #2b85e7
+  skinparam RectangleBorderStyle<<System>> dashed
+
+  rectangle "==load-balancer\n<size:10>[[Nginx]]</size>\n\nЕдиная точка входа: распределение трафика, TLS termination" <<SystemLoadBalancer>> as SystemLoadBalancer
+  rectangle "==front\n<size:10>[[React]]</size>\n\nВеб-интерфейс для взаимодействия с системой" <<SystemFront>> as SystemFront
+  rectangle "==api-gateway\n<size:10>[[Spring Cloud Gateway]]</size>\n\nМаршрутизация API, аутентификация (JWT), авторизация (RBAC), rate limiting, публикация событий 401/403 и логина (3.02)" <<SystemApiGateway>> as SystemApiGateway
+  rectangle "Обработка пользовательских запросов" <<SystemBackend>> as SystemBackend {
+    skinparam RectangleBorderColor<<SystemBackend>> #2b85e7
+    skinparam RectangleFontColor<<SystemBackend>> #2b85e7
+    skinparam RectangleBorderStyle<<SystemBackend>> dashed
+
+    rectangle "==User Service\n<size:10>[[Spring Boot]]</size>\n\nПрофили, сессии, роли (RBAC), публикация событий назначения/снятия ролей в аудит (3.01, 3.02)" <<SystemBackendUserService>> as SystemBackendUserService
+    rectangle "==Audit Service\n<size:10>[[Spring Boot]]</size>\n\nАудит операций и безопасности: audit_logs, security_events (3.02)" <<SystemBackendAuditService>> as SystemBackendAuditService
+  }
+  rectangle "==Алертинг\n<size:10>[[Grafana Alerting]]</size>\n\nПравила алертов, группировка, уведомления (PagerDuty, Slack, Email)" <<SystemMonitoringAlerting>> as SystemMonitoringAlerting
+  rectangle "==iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management (Keycloak)" <<SystemIam>> as SystemIam
+  rectangle "Хранение данных" <<SystemStorage>> as SystemStorage {
+    skinparam RectangleBorderColor<<SystemStorage>> #2b85e7
+    skinparam RectangleFontColor<<SystemStorage>> #2b85e7
+    skinparam RectangleBorderStyle<<SystemStorage>> dashed
+
+    rectangle "==Кэш\n<size:10>[[Redis Cluster]]</size>\n\nРаспределённый кэш Cache-Aside (профили, сессии, результаты запросов, rate limit)" <<SystemStorageCache>> as SystemStorageCache
+    database "==PostgreSQL (master)\n<size:10>[[PostgreSQL]]</size>\n\nЕдиная точка записи: users_db, requests_db, payments_db, notifications_db, audit_db. Синхронная репликация на read replicas; RPO=0." <<SystemStoragePostgresMaster>> as SystemStoragePostgresMaster
+  }
+  queue "==Event Bus\n<size:10>[[Apache Kafka]]</size>\n\nАсинхронные события между сервисами (в т.ч. audit.events, security.events для аудита — 3.02)" <<SystemEventBus>> as SystemEventBus
+  rectangle "==Vault (секреты)\n<size:10>[[HashiCorp Vault]]</size>\n\nУправление секретами: БД, Redis, Kafka, IAM client_secret, платёжные API-ключи (3.04)" <<SystemSecretsVault>> as SystemSecretsVault
+}
+rectangle "Внешние системы" <<System_ext>> as System_ext {
+  skinparam RectangleBorderColor<<System_ext>> #827a8e
+  skinparam RectangleFontColor<<System_ext>> #827a8e
+  skinparam RectangleBorderStyle<<System_ext>> dashed
+
+  rectangle "==IAM\n<size:10>[[OAuth2]]</size>\n\nВнешняя система аутентификации" <<System_extIam_ext>> as System_extIam_ext
+}
+
+UsersWeb .[#15803d,thickness=2].> SystemLoadBalancer : <color:#15803d>Загрузка веб-интерфейса и API-запросы\n<size:8>[<color:#15803d>HTTPS]</size>
+UsersAndroid .[#15803d,thickness=2].> SystemLoadBalancer : <color:#15803d>API-запросы и уведомления в реальном \n<color:#15803d>времени\n<size:8>[<color:#15803d>HTTPS]</size>
+UsersIos .[#15803d,thickness=2].> SystemLoadBalancer : <color:#15803d>API-запросы и уведомления в реальном \n<color:#15803d>времени\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemLoadBalancer .[#6366f1,thickness=2].> SystemFront : <color:#6366f1>Раздача статики и проксирование API\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemFront .[#6366f1,thickness=2].> SystemApiGateway : <color:#6366f1>Вызовы API с фронтенда\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemApiGateway .[#15803d,thickness=2].> SystemIam : <color:#15803d>Валидация JWT, проверка прав, JWKS\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemApiGateway .[#6366f1,thickness=2].> SystemBackendUserService : <color:#6366f1>Маршрутизация /api/users, профиль, \n<color:#6366f1>сессии\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemBackendUserService .[#15803d,thickness=2].> SystemIam : <color:#15803d>Синхронизация пользователей, ролей и \n<color:#15803d>сессий с Keycloak\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemBackendUserService .[#6366f1,thickness=2].> SystemStorageCache : <color:#6366f1>Профили, сессии (Cache-Aside)\n<size:8>[<color:#6366f1>TCP]</size>
+SystemBackendUserService .[#6366f1,thickness=2].> SystemStoragePostgresMaster : <color:#6366f1>Запись: users, sessions, roles\n<size:8>[<color:#6366f1>TCP]</size>
+SystemBackendAuditService .[#6366f1,thickness=2].> SystemStoragePostgresMaster : <color:#6366f1>Запись: audit_logs, security_events\n<size:8>[<color:#6366f1>TCP]</size>
+SystemApiGateway .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>Публикация событий 401/403, логин \n<color:#6366f1>успех/неудача, 429 (3.02)\n<size:8>[<color:#6366f1>TCP]</size>
+SystemBackendUserService .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>Публикация событий назначения/снятия \n<color:#6366f1>ролей (ROLE_GRANTED, ROLE_REVOKED)\n<size:8>[<color:#6366f1>TCP]</size>
+SystemBackendAuditService .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>Потребление событий аудита и \n<color:#6366f1>безопасности (audit.events, \n<color:#6366f1>security.events)\n<size:8>[<color:#6366f1>TCP]</size>
+SystemApiGateway .[#15803d,thickness=2].> SystemSecretsVault : <color:#15803d>Получение секретов (IAM client_secret, \n<color:#15803d>rate-limit config)\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemBackendUserService .[#15803d,thickness=2].> SystemSecretsVault : <color:#15803d>Получение секретов (БД, Redis, IAM \n<color:#15803d>client)\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemBackendAuditService .[#15803d,thickness=2].> SystemSecretsVault : <color:#15803d>Получение секретов (БД, Kafka)\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemApiGateway .[#15803d,thickness=2].> System_extIam_ext : <color:#15803d>Логин, refresh токенов, синхронизация \n<color:#15803d>пользователей\n<size:8>[<color:#15803d>HTTPS]</size>
+@enduml
