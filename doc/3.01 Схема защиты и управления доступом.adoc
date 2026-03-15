@@ -246,4 +246,4 @@ Client (Web / Android / iOS)
 | User Service синхронизация с Keycloak (user-service → iam), кэш сессий (cache)
 |===
 
-*Вывод:* текущая модель (IAM, API Gateway, User Service, связи с iam_ext и cache) удовлетворяет требованиям аутентификации и авторизации. Рекомендуется явно зафиксировать в конфигурации Keycloak и Gateway: TTL access/refresh токенов, использование PKCE для SPA, JWKS endpoint и политику отзыва/rotation refresh token, а также таймаут неактивной сессии (30 мин) в соответствии с FR-002.
+*Вывод:* текущая модель (IAM, API Gateway, User Service, связи с iam_ext и cache) удовлетворяет требованиям аутентификации и авторизации. Рекомендуется явно зафиксировать в конфигурации Keycloak и Gateway: TTL access/refresh токенов, использование PKCE для SPA, JWKS endpoint и политику отзыва/rotation refresh token, а также таймаут неактивной сессии (30 мин) в соответствии с FR-002. Готовая конфигурация Keycloak (realm, клиенты, роли) — в каталоге `keycloak/`: `realm-system-design.json`, импорт через Admin UI или скрипт `keycloak/apply-realm.sh`; см. `keycloak/README.md`.

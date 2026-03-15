@@ -1,0 +1,141 @@
+{
+  "realm": "system-design",
+  "displayName": "System Design Homework",
+  "displayNameHtml": "<b>System Design</b>",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "registrationEmailAsUsername": false,
+  "rememberMe": false,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 5,
+  "accessTokenLifespan": 900,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 86400,
+  "offlineSessionIdleTimeout": 2592000,
+  "refreshTokenMaxReuse": 0,
+  "revokeRefreshToken": true,
+  "defaultSignatureAlgorithm": "RS256",
+  "clientSessionIdleTimeout": 0,
+  "clientSessionMaxLifespan": 0,
+  "clientOfflineSessionIdleTimeout": 0,
+  "clientOfflineSessionMaxLifespan": 0,
+  "clients": [
+    {
+      "clientId": "system-design-web",
+      "name": "Web (SPA)",
+      "description": "Frontend SPA — Authorization Code + PKCE (3.01)",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "https://app.example.com/*",
+        "http://localhost:3000/*",
+        "http://localhost:8080/*"
+      ],
+      "webOrigins": [
+        "https://app.example.com",
+        "http://localhost:3000",
+        "http://localhost:8080"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "https://app.example.com/*|http://localhost:3000/*",
+        "backchannel.logout.session.required": "true",
+        "backchannel.logout.revoke.offline_tokens": "true"
+      },
+      "fullScopeAllowed": true,
+      "defaultClientScopes": ["roles", "web-origins", "profile", "email"],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "system-design-mobile",
+      "name": "Mobile (Android / iOS)",
+      "description": "Нативные приложения — Authorization Code + PKCE (3.01)",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "com.systemdesign.app:/callback",
+        "https://app.example.com/mobile/callback"
+      ],
+      "webOrigins": ["+"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "fullScopeAllowed": true,
+      "defaultClientScopes": ["roles", "web-origins", "profile", "email"],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "api-gateway",
+      "name": "API Gateway / User Service",
+      "description": "Backend: server-side вызовы к Keycloak, обмен code на токены; client_secret в Vault (3.04)",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "redirectUris": [],
+      "webOrigins": [],
+      "attributes": {},
+      "fullScopeAllowed": true,
+      "defaultClientScopes": ["roles", "web-origins", "profile", "email"],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "payment-webhook",
+      "name": "Payment Webhook (SERVICE)",
+      "description": "Машинный клиент для приёма webhook платёжного провайдера; Client Credentials (3.01)",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "redirectUris": [],
+      "webOrigins": [],
+      "attributes": {},
+      "fullScopeAllowed": false,
+      "defaultClientScopes": ["roles"],
+      "optionalClientScopes": []
+    }
+  ],
+  "roles": {
+    "realm": [
+      { "name": "ADMIN", "description": "Администратор — полный доступ (3.01)", "composite": false, "clientRole": false },
+      { "name": "OPERATOR", "description": "Оператор — управление запросами, мониторинг", "composite": false, "clientRole": false },
+      { "name": "USER", "description": "Пользователь — свои запросы, платежи, уведомления", "composite": false, "clientRole": false },
+      { "name": "VIEWER", "description": "Наблюдатель — только просмотр своих данных", "composite": false, "clientRole": false },
+      { "name": "SERVICE", "description": "Сервис — машинная учётная запись (webhook, job)", "composite": false, "clientRole": false },
+      { "name": "SUPPORT", "description": "Поддержка — чтение профилей и запросов по тикетам", "composite": false, "clientRole": false },
+      { "name": "AUDITOR", "description": "Аудитор — чтение audit_logs, security_events", "composite": false, "clientRole": false },
+      { "name": "BILLING", "description": "Финансовый специалист — чтение платежей и отчётов", "composite": false, "clientRole": false }
+    ]
+  },
+  "defaultDefaultClientScopes": ["roles", "web-origins", "profile", "email"],
+  "defaultOptionalClientScopes": []
+}
