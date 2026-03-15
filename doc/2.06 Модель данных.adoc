@@ -59,7 +59,7 @@ CREATE INDEX idx_users_created_at ON users(created_at);
 CREATE TABLE user_roles (
     role_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    role_name VARCHAR(50) NOT NULL, -- ADMIN, USER, OPERATOR, VIEWER
+    role_name VARCHAR(50) NOT NULL, -- ADMIN, OPERATOR, USER, VIEWER, SERVICE, SUPPORT, AUDITOR, BILLING (см. 3.01)
     granted_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     granted_by UUID REFERENCES users(user_id),
     expires_at TIMESTAMP WITH TIME ZONE,
