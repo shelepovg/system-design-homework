@@ -103,23 +103,23 @@ rectangle "Система" <<System>> as System {
     skinparam RectangleFontColor<<SystemMonitoring>> #2b85e7
     skinparam RectangleBorderStyle<<SystemMonitoring>> dashed
 
-    rectangle "==Сбор логов\n<size:10>[[Fluent Bit]]</size>\n\nАгенты на узлах: сбор и пересылка логов с сервисов" <<SystemMonitoringLogCollector>> as SystemMonitoringLogCollector
-    rectangle "==Сбор метрик\n<size:10>[[Prometheus / OpenTelemetry Collector]]</size>\n\nСкрейпинг и приём метрик с сервисов и инфраструктуры" <<SystemMonitoringMetricsCollector>> as SystemMonitoringMetricsCollector
-    queue "==Шина логов\n<size:10>[[Apache Kafka]]</size>\n\nБуфер и поток логов, сглаживание пиков" <<SystemMonitoringLogBus>> as SystemMonitoringLogBus
-    rectangle "==Хранилище метрик\n<size:10>[Prometheus TSDB / VictoriaMetrics]</size>\n\nВременные ряды, retention (real-time / 7 дней / 90 дней)" <<SystemMonitoringMetricsStorage>> as SystemMonitoringMetricsStorage
-    rectangle "==Обработка логов\n<size:10>[[Vector]]</size>\n\nПарсинг, обогащение, маршрутизация, маскирование PII" <<SystemMonitoringLogProcessor>> as SystemMonitoringLogProcessor
-    rectangle "==Алертинг\n<size:10>[[Grafana Alerting]]</size>\n\nПравила алертов, группировка, уведомления (PagerDuty, Slack, Email)" <<SystemMonitoringAlerting>> as SystemMonitoringAlerting
-    rectangle "==Хранилище логов\n<size:10>[[Elasticsearch]]</size>\n\nИндексация и хранение (hot/warm/cold)" <<SystemMonitoringLogStorage>> as SystemMonitoringLogStorage
-    rectangle "==Представление логов, дашборды и анализ\n<size:10>[[Grafana]]</size>\n\nПоиск, фильтрация, просмотр логов для операторов и разработчиков" <<SystemMonitoringLogUi>> as SystemMonitoringLogUi
+    rectangle "Сбор логов\n<size:10>[[Fluent Bit]]</size>\n\nАгенты на узлах: сбор и пересылка логов с сервисов" <<SystemMonitoringLogCollector>> as SystemMonitoringLogCollector
+    rectangle "Сбор метрик\n<size:10>[[Prometheus / OpenTelemetry Collector]]</size>\n\nСкрейпинг и приём метрик с сервисов и инфраструктуры" <<SystemMonitoringMetricsCollector>> as SystemMonitoringMetricsCollector
+    queue "Шина логов\n<size:10>[[Apache Kafka]]</size>\n\nБуфер и поток логов, сглаживание пиков" <<SystemMonitoringLogBus>> as SystemMonitoringLogBus
+    rectangle "Хранилище метрик\n<size:10>[Prometheus TSDB / VictoriaMetrics]</size>\n\nВременные ряды, retention (real-time / 7 дней / 90 дней)" <<SystemMonitoringMetricsStorage>> as SystemMonitoringMetricsStorage
+    rectangle "Обработка логов\n<size:10>[[Vector]]</size>\n\nПарсинг, обогащение, маршрутизация, маскирование PII" <<SystemMonitoringLogProcessor>> as SystemMonitoringLogProcessor
+    rectangle "Алертинг\n<size:10>[[Grafana Alerting]]</size>\n\nПравила алертов, группировка, уведомления (PagerDuty, Slack, Email)" <<SystemMonitoringAlerting>> as SystemMonitoringAlerting
+    rectangle "Хранилище логов\n<size:10>[[Elasticsearch]]</size>\n\nИндексация и хранение (hot/warm/cold)" <<SystemMonitoringLogStorage>> as SystemMonitoringLogStorage
+    rectangle "Представление логов, дашборды и анализ\n<size:10>[[Grafana]]</size>\n\nПоиск, фильтрация, просмотр логов для операторов и разработчиков" <<SystemMonitoringLogUi>> as SystemMonitoringLogUi
   }
-  rectangle "==load-balancer\n<size:10>[[Nginx]]</size>\n\nЕдиная точка входа: распределение трафика, TLS termination" <<SystemLoadBalancer>> as SystemLoadBalancer
-  rectangle "==front\n<size:10>[[React]]</size>\n\nВеб-интерфейс для взаимодействия с системой" <<SystemFront>> as SystemFront
-  rectangle "==api-gateway\n<size:10>[[Spring Cloud Gateway]]</size>\n\nМаршрутизация API, аутентификация (JWT), авторизация (RBAC), rate limiting, публикация событий 401/403 и логина (3.02)" <<SystemApiGateway>> as SystemApiGateway
-  rectangle "==Обработка пользовательских запросов\n<size:10>[[Spring Boot]]</size>\n\nМикросервисы: пользователи, запросы, платежи, уведомления, аудит" <<SystemBackend>> as SystemBackend
-  rectangle "==iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management (Keycloak)" <<SystemIam>> as SystemIam
-  rectangle "==Хранение данных\n\nБД (master + read replicas), кэш, хранилище бэкапов. Запись — в master, чтение — с реплик (2.13, 2.14)." <<SystemStorage>> as SystemStorage
-  queue "==Event Bus\n<size:10>[[Apache Kafka]]</size>\n\nАсинхронные события между сервисами (в т.ч. audit.events, security.events для аудита — 3.02)" <<SystemEventBus>> as SystemEventBus
-  rectangle "==Vault (секреты)\n<size:10>[[HashiCorp Vault]]</size>\n\nУправление секретами: БД, Redis, Kafka, IAM client_secret, платёжные API-ключи (3.04)" <<SystemSecretsVault>> as SystemSecretsVault
+  rectangle "load-balancer\n<size:10>[[Nginx]]</size>\n\nЕдиная точка входа: распределение трафика, TLS termination" <<SystemLoadBalancer>> as SystemLoadBalancer
+  rectangle "front\n<size:10>[[React]]</size>\n\nВеб-интерфейс для взаимодействия с системой" <<SystemFront>> as SystemFront
+  rectangle "api-gateway\n<size:10>[[Spring Cloud Gateway]]</size>\n\nМаршрутизация API, аутентификация (JWT), авторизация (RBAC), rate limiting, публикация событий 401/403 и логина (3.02)" <<SystemApiGateway>> as SystemApiGateway
+  rectangle "Обработка пользовательских запросов\n<size:10>[[Spring Boot]]</size>\n\nМикросервисы: пользователи, запросы, платежи, уведомления, аудит" <<SystemBackend>> as SystemBackend
+  rectangle "iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management (Keycloak)" <<SystemIam>> as SystemIam
+  rectangle "Хранение данных\n\nБД (master + read replicas), кэш, хранилище бэкапов. Запись — в master, чтение — с реплик (2.13, 2.14)." <<SystemStorage>> as SystemStorage
+  queue "Event Bus\n<size:10>[[Apache Kafka]]</size>\n\nАсинхронные события между сервисами (в т.ч. audit.events, security.events для аудита — 3.02)" <<SystemEventBus>> as SystemEventBus
+  rectangle "Vault (секреты)\n<size:10>[[HashiCorp Vault]]</size>\n\nУправление секретами: БД, Redis, Kafka, IAM client_secret, платёжные API-ключи (3.04)" <<SystemSecretsVault>> as SystemSecretsVault
 }
 
 SystemMonitoringLogCollector .[#6366f1,thickness=2].> SystemMonitoringLogBus : <color:#6366f1>Пересылка логов в шину\n<size:8>[<color:#6366f1>TCP]</size>

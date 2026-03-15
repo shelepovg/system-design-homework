@@ -93,45 +93,45 @@ rectangle "Пользователи" <<Users>> as Users {
   skinparam RectangleFontColor<<Users>> #2b85e7
   skinparam RectangleBorderStyle<<Users>> dashed
 
-  rectangle "==Web (браузер)\n<size:10>[HTTP/1.1, HTTP/2]</size>\n\nПодключение по браузеру" <<UsersWeb>> as UsersWeb
-  rectangle "==Android\n<size:10>[HTTP/1.1, HTTP/2, WebSocket]</size>\n\nМобильное приложение" <<UsersAndroid>> as UsersAndroid
-  rectangle "==iOS\n<size:10>[HTTP/1.1, HTTP/2, WebSocket]</size>\n\nМобильное приложение" <<UsersIos>> as UsersIos
+  rectangle "Web (браузер)\n<size:10>[HTTP/1.1, HTTP/2]</size>\n\nПодключение по браузеру" <<UsersWeb>> as UsersWeb
+  rectangle "Android\n<size:10>[HTTP/1.1, HTTP/2, WebSocket]</size>\n\nМобильное приложение" <<UsersAndroid>> as UsersAndroid
+  rectangle "iOS\n<size:10>[HTTP/1.1, HTTP/2, WebSocket]</size>\n\nМобильное приложение" <<UsersIos>> as UsersIos
 }
 rectangle "Система" <<System>> as System {
   skinparam RectangleBorderColor<<System>> #2b85e7
   skinparam RectangleFontColor<<System>> #2b85e7
   skinparam RectangleBorderStyle<<System>> dashed
 
-  rectangle "==load-balancer\n<size:10>[[Nginx]]</size>\n\nЕдиная точка входа: распределение трафика, TLS termination" <<SystemLoadBalancer>> as SystemLoadBalancer
-  rectangle "==front\n<size:10>[[React]]</size>\n\nВеб-интерфейс для взаимодействия с системой" <<SystemFront>> as SystemFront
-  rectangle "==api-gateway\n<size:10>[[Spring Cloud Gateway]]</size>\n\nМаршрутизация API, аутентификация (JWT), авторизация (RBAC), rate limiting, публикация событий 401/403 и логина (3.02)" <<SystemApiGateway>> as SystemApiGateway
+  rectangle "load-balancer\n<size:10>[[Nginx]]</size>\n\nЕдиная точка входа: распределение трафика, TLS termination" <<SystemLoadBalancer>> as SystemLoadBalancer
+  rectangle "front\n<size:10>[[React]]</size>\n\nВеб-интерфейс для взаимодействия с системой" <<SystemFront>> as SystemFront
+  rectangle "api-gateway\n<size:10>[[Spring Cloud Gateway]]</size>\n\nМаршрутизация API, аутентификация (JWT), авторизация (RBAC), rate limiting, публикация событий 401/403 и логина (3.02)" <<SystemApiGateway>> as SystemApiGateway
   rectangle "Обработка пользовательских запросов" <<SystemBackend>> as SystemBackend {
     skinparam RectangleBorderColor<<SystemBackend>> #2b85e7
     skinparam RectangleFontColor<<SystemBackend>> #2b85e7
     skinparam RectangleBorderStyle<<SystemBackend>> dashed
 
-    rectangle "==User Service\n<size:10>[[Spring Boot]]</size>\n\nПрофили, сессии, роли (RBAC), публикация событий назначения/снятия ролей в аудит (3.01, 3.02)" <<SystemBackendUserService>> as SystemBackendUserService
-    rectangle "==Audit Service\n<size:10>[[Spring Boot]]</size>\n\nАудит операций и безопасности: audit_logs, security_events (3.02)" <<SystemBackendAuditService>> as SystemBackendAuditService
+    rectangle "User Service\n<size:10>[[Spring Boot]]</size>\n\nПрофили, сессии, роли (RBAC), публикация событий назначения/снятия ролей в аудит (3.01, 3.02)" <<SystemBackendUserService>> as SystemBackendUserService
+    rectangle "Audit Service\n<size:10>[[Spring Boot]]</size>\n\nАудит операций и безопасности: audit_logs, security_events (3.02)" <<SystemBackendAuditService>> as SystemBackendAuditService
   }
-  rectangle "==Алертинг\n<size:10>[[Grafana Alerting]]</size>\n\nПравила алертов, группировка, уведомления (PagerDuty, Slack, Email)" <<SystemMonitoringAlerting>> as SystemMonitoringAlerting
-  rectangle "==iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management (Keycloak)" <<SystemIam>> as SystemIam
+  rectangle "Алертинг\n<size:10>[[Grafana Alerting]]</size>\n\nПравила алертов, группировка, уведомления (PagerDuty, Slack, Email)" <<SystemMonitoringAlerting>> as SystemMonitoringAlerting
+  rectangle "iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management (Keycloak)" <<SystemIam>> as SystemIam
   rectangle "Хранение данных" <<SystemStorage>> as SystemStorage {
     skinparam RectangleBorderColor<<SystemStorage>> #2b85e7
     skinparam RectangleFontColor<<SystemStorage>> #2b85e7
     skinparam RectangleBorderStyle<<SystemStorage>> dashed
 
-    rectangle "==Кэш\n<size:10>[[Redis Cluster]]</size>\n\nРаспределённый кэш Cache-Aside (профили, сессии, результаты запросов, rate limit)" <<SystemStorageCache>> as SystemStorageCache
-    database "==PostgreSQL (master)\n<size:10>[[PostgreSQL]]</size>\n\nЕдиная точка записи: users_db, requests_db, payments_db, notifications_db, audit_db. Синхронная репликация на read replicas; RPO=0." <<SystemStoragePostgresMaster>> as SystemStoragePostgresMaster
+    rectangle "Кэш\n<size:10>[[Redis Cluster]]</size>\n\nРаспределённый кэш Cache-Aside (профили, сессии, результаты запросов, rate limit)" <<SystemStorageCache>> as SystemStorageCache
+    database "PostgreSQL (master)\n<size:10>[[PostgreSQL]]</size>\n\nЕдиная точка записи: users_db, requests_db, payments_db, notifications_db, audit_db. Синхронная репликация на read replicas; RPO=0." <<SystemStoragePostgresMaster>> as SystemStoragePostgresMaster
   }
-  queue "==Event Bus\n<size:10>[[Apache Kafka]]</size>\n\nАсинхронные события между сервисами (в т.ч. audit.events, security.events для аудита — 3.02)" <<SystemEventBus>> as SystemEventBus
-  rectangle "==Vault (секреты)\n<size:10>[[HashiCorp Vault]]</size>\n\nУправление секретами: БД, Redis, Kafka, IAM client_secret, платёжные API-ключи (3.04)" <<SystemSecretsVault>> as SystemSecretsVault
+  queue "Event Bus\n<size:10>[[Apache Kafka]]</size>\n\nАсинхронные события между сервисами (в т.ч. audit.events, security.events для аудита — 3.02)" <<SystemEventBus>> as SystemEventBus
+  rectangle "Vault (секреты)\n<size:10>[[HashiCorp Vault]]</size>\n\nУправление секретами: БД, Redis, Kafka, IAM client_secret, платёжные API-ключи (3.04)" <<SystemSecretsVault>> as SystemSecretsVault
 }
 rectangle "Внешние системы" <<System_ext>> as System_ext {
   skinparam RectangleBorderColor<<System_ext>> #827a8e
   skinparam RectangleFontColor<<System_ext>> #827a8e
   skinparam RectangleBorderStyle<<System_ext>> dashed
 
-  rectangle "==IAM\n<size:10>[[OAuth2]]</size>\n\nВнешняя система аутентификации" <<System_extIam_ext>> as System_extIam_ext
+  rectangle "IAM\n<size:10>[[OAuth2]]</size>\n\nВнешняя система аутентификации" <<System_extIam_ext>> as System_extIam_ext
 }
 
 UsersWeb .[#15803d,thickness=2].> SystemLoadBalancer : <color:#15803d>Загрузка веб-интерфейса и API-запросы\n<size:8>[<color:#15803d>HTTPS]</size>
