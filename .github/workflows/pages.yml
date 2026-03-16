@@ -3,7 +3,7 @@ name: Deploy LikeC4 to GitHub Pages
 on:
   push:
     branches:
-      - feature/hw-4
+      - feature/hw-5
   workflow_dispatch:
     inputs:
       branch:
