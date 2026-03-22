@@ -7,7 +7,8 @@ cd "$(dirname "$0")/.."
 # start server
 # sudo likec4 start
 
-# Export puml — только схемы этого проекта (каталог с .likec4rc и *.c4)
+# Export puml — только схемы этого проекта (каталог с .likec4rc и *.c4).
+# Для PNG нужны Java + PlantUML; при новых view в views.c4 появятся новые .puml и .png (напр. access_control_rbac).
 likec4 gen plantuml -o ../doc/схемы
 # Обход для превью PlantUML в (стандартный PlantUML не знает person из C4/LikeC4):
 # 1) person -> rectangle (person не входит в стандарт, парсер падает на этой строке)

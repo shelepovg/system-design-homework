@@ -2,6 +2,12 @@
 
 Документ указывает расположение и формат схем данных решения. Полное описание модели данных (таблицы, домены, связи, Database per Service) — документ 2.06. Система хранения (технологии, масштабирование, бэкапы) — документ 2.13.
 
+==== Визуальная схема модели данных
+
+Схема построена по `dbml/model.dbml` (таблицы, связи, Database per Service: users_db, requests_db, payments_db, notifications_db, audit_db, monitoring).
+
+image::images/data_model.png[Схема данных, align=center]
+
 *Где находятся схемы:*
 
   * *Концептуальная и логическая модель:* 2.06 «Модель данных» — перечень сущностей, атрибуты, типы, ограничения, разбиение по БД (users_db, requests_db, payments_db, notifications_db, audit_db).

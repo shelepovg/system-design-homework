@@ -58,6 +58,11 @@ skinparam queue<<SystemEventBus>>{
   FontColor #ffffff
   BorderColor #1892c5
 }
+skinparam rectangle<<SystemSecretsVault>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
 skinparam rectangle<<System_ext>>{
   BackgroundColor #827a8e
   FontColor #ffffff
@@ -72,11 +77,12 @@ rectangle "Система" <<System>> as System {
   rectangle "Система мониторинга\n\nСбор логов и метрик, обработка, хранение, дашборды и алертинг" <<SystemMonitoring>> as SystemMonitoring
   rectangle "load-balancer\n<size:10>[[Nginx]]</size>\n\nЕдиная точка входа: распределение трафика, TLS termination" <<SystemLoadBalancer>> as SystemLoadBalancer
   rectangle "front\n<size:10>[[React]]</size>\n\nВеб-интерфейс для взаимодействия с системой" <<SystemFront>> as SystemFront
-  rectangle "api-gateway\n<size:10>[[Spring Cloud Gateway]]</size>\n\nМаршрутизация API, аутентификация, авторизация, rate limiting" <<SystemApiGateway>> as SystemApiGateway
+  rectangle "api-gateway\n<size:10>[[Spring Cloud Gateway]]</size>\n\nМаршрутизация API, аутентификация (JWT), авторизация (RBAC), rate limiting, публикация событий 401/403 и логина (3.02)" <<SystemApiGateway>> as SystemApiGateway
   rectangle "Обработка пользовательских запросов\n<size:10>[[Spring Boot]]</size>\n\nМикросервисы: пользователи, запросы, платежи, уведомления, аудит" <<SystemBackend>> as SystemBackend
-  rectangle "iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management" <<SystemIam>> as SystemIam
+  rectangle "iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management (Keycloak)" <<SystemIam>> as SystemIam
   rectangle "Хранение данных\n\nБД (master + read replicas), кэш, хранилище бэкапов. Запись — в master, чтение — с реплик (2.13, 2.14)." <<SystemStorage>> as SystemStorage
-  queue "Event Bus\n<size:10>[[Apache Kafka]]</size>\n\nАсинхронные события между сервисами" <<SystemEventBus>> as SystemEventBus
+  queue "Event Bus\n<size:10>[[Apache Kafka]]</size>\n\nАсинхронные события между сервисами (в т.ч. audit.events, security.events для аудита — 3.02)" <<SystemEventBus>> as SystemEventBus
+  rectangle "Vault (секреты)\n<size:10>[[HashiCorp Vault]]</size>\n\nУправление секретами: БД, Redis, Kafka, IAM client_secret, платёжные API-ключи (3.04)" <<SystemSecretsVault>> as SystemSecretsVault
 }
 rectangle "Внешние системы\n\nВнешние системы" <<System_ext>> as System_ext
 
@@ -87,11 +93,14 @@ SystemFront .[#6366f1,thickness=2].> SystemApiGateway : <color:#6366f1>Вызо�
 SystemMonitoring .[#6366f1,thickness=2].> SystemFront : <color:#6366f1>[...]
 SystemApiGateway .[#15803d,thickness=2].> SystemIam : <color:#15803d>Валидация JWT, проверка прав, JWKS\n<size:8>[<color:#15803d>HTTPS]</size>
 SystemApiGateway .[#6366f1,thickness=2].> SystemBackend : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemApiGateway .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>Публикация событий 401/403, логин \n<color:#6366f1>успех/неудача, 429 (3.02)\n<size:8>[<color:#6366f1>TCP]</size>
+SystemApiGateway .[#15803d,thickness=2].> SystemSecretsVault : <color:#15803d>Получение секретов (IAM client_secret, \n<color:#15803d>rate-limit config)\n<size:8>[<color:#15803d>HTTPS]</size>
 SystemMonitoring .[#6366f1,thickness=2].> SystemApiGateway : <color:#6366f1>[...]
 SystemBackend .[#15803d,thickness=2].> SystemIam : <color:#15803d>Синхронизация пользователей, ролей и \n<color:#15803d>сессий с Keycloak\n<size:8>[<color:#15803d>HTTPS]</size>
 SystemMonitoring .[#6366f1,thickness=2].> SystemIam : <color:#6366f1>[...]
 SystemBackend .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackend .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
+SystemBackend .[#15803d,thickness=2].> SystemSecretsVault : <color:#15803d>[...]\n<size:8>[<color:#15803d>HTTPS]</size>
 SystemMonitoring .[#6366f1,thickness=2].> SystemBackend : <color:#6366f1>[...]
 SystemMonitoring .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]
 SystemMonitoring .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>[...]

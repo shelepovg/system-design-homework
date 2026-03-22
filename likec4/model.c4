@@ -6,14 +6,20 @@ model{
         web = container "Web (браузер)" {
             summary 'Подключение по браузеру'
             technology 'HTTP/1.1, HTTP/2'
+            icon tech:chrome
+            description 'Клиентский доступ к системе через веб-браузер. Загрузка SPA, вызовы API по HTTP/1.1 или HTTP/2.'
         }
         android = container "Android" {
             summary 'Мобильное приложение'
             technology 'HTTP/1.1, HTTP/2, WebSocket'
+            icon tech:android
+            description 'Нативное или гибридное приложение на Android. API и push-уведомления через WebSocket.'
         }
         ios = container "iOS" {
             summary 'Мобильное приложение'
             technology 'HTTP/1.1, HTTP/2, WebSocket'
+            icon tech:apple
+            description 'Нативное или гибридное приложение на iOS. API и push-уведомления через WebSocket.'
         }
     }
     system = system 'Система'{
@@ -30,13 +36,13 @@ model{
             technology '[React]'
         }
         api-gateway = container {
-            summary 'Маршрутизация API, аутентификация, авторизация, rate limiting'
+            summary 'Маршрутизация API, аутентификация (JWT), авторизация (RBAC), rate limiting, публикация событий 401/403 и логина (3.02)'
             technology '[Spring Cloud Gateway]'
             icon aws:api-gateway
         }
         iam = system {
-            description  'Управление доступом к системе'
-            summary 'Identity and Access Management'
+            description  'Управление доступом к системе: выдача JWT, роли в claims, JWKS для проверки подписи (3.01)'
+            summary 'Identity and Access Management (Keycloak)'
             technology '[Keycloak]'
             icon tech:oauth
         }
@@ -47,7 +53,7 @@ model{
             icon bootstrap:gear-wide-connected
 
             user-service = container 'User Service' {
-                summary 'Профили, сессии, роли'
+                summary 'Профили, сессии, роли (RBAC), публикация событий назначения/снятия ролей в аудит (3.01, 3.02)'
                 technology '[Spring Boot]'
                 icon tech:java
                 description '''
@@ -55,7 +61,7 @@ model{
 
                     - **Профиль:** просмотр и редактирование персональных данных (имя, email, телефон, аватар), настройки безопасности и интерфейса.
                     - **Сессии:** учёт активных сессий, завершение сессий, синхронизация с IAM (Keycloak).
-                    - **Роли и разрешения:** хранение и проверка RBAC (ADMIN, OPERATOR, USER, VIEWER), детальные permissions (READ, WRITE, DELETE, EXECUTE).
+                    - **Роли и разрешения:** хранение и проверка RBAC (ADMIN, OPERATOR, USER, VIEWER), детальные permissions (READ, WRITE, DELETE, EXECUTE); публикация ROLE_GRANTED/ROLE_REVOKED в Event Bus для Audit Service.
                     - **Данные:** users_db (PostgreSQL); кэш профилей и сессий в Redis (Cache-Aside). Масштабирование: min 3 инстанса в разных АЗ.
                 '''
             }
@@ -99,14 +105,14 @@ model{
                 '''
             }
             audit-service = container 'Audit Service' {
-                summary 'Аудит операций и безопасности'
+                summary 'Аудит операций и безопасности: audit_logs, security_events (3.02)'
                 technology '[Spring Boot]'
                 icon tech:java
                 description '''
                     **Назначение:** запись событий аудита и безопасности для соответствия и расследования инцидентов.
 
-                    - **Потребление событий:** подписка на топики Kafka (audit.events, payment.events, notification и др.); batch-запись в БД для снижения нагрузки.
-                    - **Содержимое:** кто, когда, какое действие, над каким ресурсом, результат; маскирование PII в логах.
+                    - **Потребление событий:** подписка на топики Kafka (audit.events, security.events); события 401/403, логин, смена ролей, доступ к чувствительным ресурсам; batch-запись в БД.
+                    - **Содержимое:** audit_logs (операции над ресурсами), security_events (LOGIN_*, UNAUTHORIZED_ACCESS, ROLE_*, SUSPICIOUS_ACTIVITY); маскирование PII (3.03).
                     - **Данные:** audit_db (PostgreSQL); при необходимости экспорт в Elasticsearch для поиска. Retention и архивирование по политике (hot/warm/cold).
                 '''
             }
@@ -134,13 +140,23 @@ model{
             backup-storage = object_storage 'Хранилище бэкапов' {
                 summary 'Отдельное хранилище: полные снимки и WAL-архив (PITR); другой регион/аккаунт. Retention ≥30 дней (2.13).'
                 technology '[MinIO]'
+                icon bootstrap:hdd-stack
+                description 'S3-совместимое объектное хранилище для полных снимков БД, WAL-архива (PITR) и опциональных снимков Redis.'
             }
         }
 
         event-bus = queue 'Event Bus' {
-            summary 'Асинхронные события между сервисами'
+            summary 'Асинхронные события между сервисами (в т.ч. audit.events, security.events для аудита — 3.02)'
             technology '[Apache Kafka]'
-        }    
+            icon tech:kafka
+            description 'Центральная шина событий: уведомления, аудит, платежи. Публикация/подписка по топикам; at-least-once доставка. Топики audit.events, security.events — события безопасности и аудита для Audit Service.'
+        }
+        secrets-vault = container 'Vault (секреты)' {
+            summary 'Управление секретами: БД, Redis, Kafka, IAM client_secret, платёжные API-ключи (3.04)'
+            technology '[HashiCorp Vault]'
+            icon bootstrap:key
+            description 'Единое хранилище секретов: KV v2, Database engine (динамические креды БД), Transit. AppRole/K8s Auth. Аудит доступа пересылается в централизованное хранилище (2.09, 3.02).'
+        }
         monitoring = system 'Система мониторинга' {
             summary 'Сбор логов и метрик, обработка, хранение, дашборды и алертинг'
             icon bootstrap:grip-horizontal
@@ -149,7 +165,8 @@ model{
             log-collector = container 'Сбор логов' {
                 summary 'Агенты на узлах: сбор и пересылка логов с сервисов'
                 technology '[Fluent Bit]'
-                // icon tech:fluentbit
+                icon bootstrap:collection
+                description 'Леговесные агенты на узлах/под: сбор логов (файлы, stdout), пересылка в шину логов (Kafka). Низкое потребление ресурсов.'
             }
             log-bus = queue 'Шина логов' {
                 summary 'Буфер и поток логов, сглаживание пиков'
@@ -181,11 +198,14 @@ model{
             metrics-storage = container 'Хранилище метрик' {
                 summary 'Временные ряды, retention (real-time / 7 дней / 90 дней)'
                 technology 'Prometheus TSDB / VictoriaMetrics'
-                // icon tech:victoriametrics
+                icon tech:prometheus
+                description 'Хранилище временных рядов метрик. Retention: real-time, 7 и 90 дней. PromQL-запросы для дашбордов и правил алертов.'
             }
             alerting = container 'Алертинг' {
                 summary 'Правила алертов, группировка, уведомления (PagerDuty, Slack, Email)'
                 technology '[Grafana Alerting]'
+                icon bootstrap:bell
+                description 'Вычисление правил алертов по метрикам, группировка и дедупликация, маршрутизация уведомлений в PagerDuty, Slack, Email.'
             }
         }
 
@@ -226,9 +246,13 @@ model{
     // API Gateway → IAM (внутренний и внешний)
     api-gateway -[https]-> iam 'Валидация JWT, проверка прав, JWKS' 'HTTPS, OAuth 2.0, OIDC, JWT' { #sync }
     api-gateway -[https]-> iam_ext 'Логин, refresh токенов, синхронизация пользователей' 'HTTPS, OAuth 2.0, OpenID Connect' { #sync }
+    api-gateway -[tcp]-> event-bus 'Публикация событий 401/403, логин успех/неудача, 429 (3.02)' 'TCP, Kafka Protocol, security.events / audit.events' { #async }
+    api-gateway -[https]-> secrets-vault 'Получение секретов (IAM client_secret, rate-limit config)' 'HTTPS, Vault API, AppRole' { #sync }
 
     // User Service → IAM (синхронизация пользователей и сессий с Keycloak)
     user-service -[https]-> iam 'Синхронизация пользователей, ролей и сессий с Keycloak' 'HTTPS, REST, JSON; OAuth2/OIDC' { #sync }
+    user-service -[tcp]-> event-bus 'Публикация событий назначения/снятия ролей (ROLE_GRANTED, ROLE_REVOKED)' 'TCP, Kafka Protocol, audit.events' { #async }
+    user-service -[https]-> secrets-vault 'Получение секретов (БД, Redis, IAM client)' 'HTTPS, Vault API, AppRole' { #sync }
 
     // Микросервисы → БД (запись в master, чтение с реплик — 2.13), кэш, Event Bus, внешние системы
     user-service -[tcp]-> postgres-master 'Запись: users, sessions, roles' 'TCP, JDBC, PostgreSQL' { #sync }
@@ -238,17 +262,21 @@ model{
     request-processing-service -[tcp]-> postgres-replicas 'Чтение: запросы, история (с реплик)' 'TCP, JDBC, PostgreSQL' { #sync }
     request-processing-service -[tcp]-> cache 'Результаты запросов (Cache-Aside)' 'TCP, Redis RESP' { #sync }
     request-processing-service -[tcp]-> event-bus 'Публикация событий (уведомления, аудит)' 'TCP, Kafka Protocol, JSON' { #async }
+    request-processing-service -[https]-> secrets-vault 'Получение секретов (БД, Redis, Kafka)' 'HTTPS, Vault API, AppRole' { #sync }
     payment-service -[tcp]-> postgres-master 'Запись: транзакции, outbox' 'TCP, JDBC, PostgreSQL' { #sync }
     payment-service -[tcp]-> postgres-replicas 'Чтение: транзакции, история (с реплик)' 'TCP, JDBC, PostgreSQL' { #sync }
     payment-service -[tcp]-> event-bus 'События платежей (уведомления, аудит)' 'TCP, Kafka Protocol, JSON' { #async }
+    payment-service -[https]-> secrets-vault 'Получение секретов (БД, платёжный API key, webhook secret)' 'HTTPS, Vault API, AppRole' { #sync }
     payment-service -[https]-> payment 'Инициация платежа; приём Webhook' 'HTTPS, REST, JSON' { #sync }
     notification-service -[tcp]-> event-bus 'Потребление событий уведомлений' 'TCP, Kafka Protocol, JSON' { #async }
     notification-service -[tcp]-> postgres-master 'Запись: статусы доставки' 'TCP, JDBC, PostgreSQL' { #sync }
     notification-service -[tcp]-> postgres-replicas 'Чтение: уведомления, шаблоны (с реплик)' 'TCP, JDBC, PostgreSQL' { #sync }
+    notification-service -[https]-> secrets-vault 'Получение секретов (БД, Kafka, провайдер уведомлений)' 'HTTPS, Vault API, AppRole' { #sync }
     notification-service -[https]-> notification 'Отправка (Email, SMS, Push)' 'HTTPS, REST; SMTP' { #async }
-    audit-service -[tcp]-> event-bus 'Потребление событий аудита' 'TCP, Kafka Protocol, JSON' { #async }
-    audit-service -[tcp]-> postgres-master 'Запись: аудит-логи' 'TCP, JDBC, PostgreSQL' { #sync }
+    audit-service -[tcp]-> event-bus 'Потребление событий аудита и безопасности (audit.events, security.events)' 'TCP, Kafka Protocol, JSON' { #async }
+    audit-service -[tcp]-> postgres-master 'Запись: audit_logs, security_events' 'TCP, JDBC, PostgreSQL' { #sync }
     audit-service -[tcp]-> postgres-replicas 'Чтение: аудит (с реплик, расследования)' 'TCP, JDBC, PostgreSQL' { #sync }
+    audit-service -[https]-> secrets-vault 'Получение секретов (БД, Kafka)' 'HTTPS, Vault API, AppRole' { #sync }
 
     // Репликация бэкапов в отдельное хранилище (2.13: полный снимок, WAL-архив, PITR)
     postgres-master -[https]-> backup-storage 'Репликация бэкапов: полный снимок, WAL-архив (PITR)' 'WAL archive, S3-совместимый API' { #async }

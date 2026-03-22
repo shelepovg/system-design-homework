@@ -2,9 +2,11 @@
     "name": "likec4-diagrams",
     "private": true,
     "devDependencies": {
-      "likec4": "^1.47.0"
+        "likec4": "^1.52.0",
+        "vitest": "^1.6.1"
     },
     "scripts": {
-      "build:likec4": "likec4 build likec4 --output dist --base /system-design-homework/"
+        "build:likec4": "likec4 build likec4 --output dist --base /system-design-homework/",
+        "test:likec4": "vitest run test/likec4-containers.spec.ts test/likec4-storage.spec.ts test/likec4-relationships.spec.ts"
     }
-  }
+}
