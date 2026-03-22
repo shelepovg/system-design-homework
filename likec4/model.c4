@@ -41,7 +41,7 @@ model{
             icon aws:api-gateway
         }
         iam = system {
-            description  'Управление доступом к системе: выдача JWT, роли в claims, JWKS для проверки подписи (3.01)'
+            description  'Управление доступом к системе: выдача JWT, восемь realm-ролей в claims (FR-003/3.01), JWKS для проверки подписи (3.01)'
             summary 'Identity and Access Management (Keycloak)'
             technology '[Keycloak]'
             icon tech:oauth
@@ -61,7 +61,7 @@ model{
 
                     - **Профиль:** просмотр и редактирование персональных данных (имя, email, телефон, аватар), настройки безопасности и интерфейса.
                     - **Сессии:** учёт активных сессий, завершение сессий, синхронизация с IAM (Keycloak).
-                    - **Роли и разрешения:** хранение и проверка RBAC (ADMIN, OPERATOR, USER, VIEWER), детальные permissions (READ, WRITE, DELETE, EXECUTE); публикация ROLE_GRANTED/ROLE_REVOKED в Event Bus для Audit Service.
+                    - **Роли и разрешения:** хранение и проверка RBAC realm-ролей (ADMIN, OPERATOR, USER, VIEWER, SERVICE, SUPPORT, AUDITOR, BILLING; Keycloak); детальные permissions (READ, WRITE, DELETE, EXECUTE, MANAGE); публикация ROLE_GRANTED/ROLE_REVOKED в Event Bus для Audit Service.
                     - **Данные:** users_db (PostgreSQL); кэш профилей и сессий в Redis (Cache-Aside). Масштабирование: min 3 инстанса в разных АЗ.
                 '''
             }
@@ -158,7 +158,7 @@ model{
             description 'Единое хранилище секретов: KV v2, Database engine (динамические креды БД), Transit. AppRole/K8s Auth. Аудит доступа пересылается в централизованное хранилище (2.09, 3.02).'
         }
         monitoring = system 'Система мониторинга' {
-            summary 'Сбор логов и метрик, обработка, хранение, дашборды и алертинг'
+            summary 'Логи, метрики, APM, распределённая трассировка (OpenTelemetry → Jaeger/Zipkin), дашборды и алертинг (NFR-009, 2.09)'
             icon bootstrap:grip-horizontal
 
             // ---- Логи: сбор → Kafka → обработка → хранение → представление ----
@@ -184,16 +184,36 @@ model{
                 icon tech:elasticsearch
             }
             log-ui = container 'Представление логов, дашборды и анализ' {
-                summary 'Поиск, фильтрация, просмотр логов для операторов и разработчиков'
+                summary 'Поиск логов, метрики (PromQL), при необходимости — дашборды рядом с трассами (2.09)'
                 technology '[Grafana]'
                 icon tech:grafana
+                description 'Loki/Elasticsearch для логов, Prometheus/VictoriaMetrics для метрик; опционально дата-сорсы для трейсов (Jaeger/Tempo) при унификации UI.'
             }
 
             // ---- Метрики: сбор → хранение → анализ → представление и алерты ----
             metrics-collector = container 'Сбор метрик' {
-                summary 'Скрейпинг и приём метрик с сервисов и инфраструктуры'
-                technology '[Prometheus / OpenTelemetry Collector]'
+                summary 'Pull-скрейпинг Prometheus с сервисов и экспортёров (RED/USE, NFR-009)'
+                technology '[Prometheus]'
                 icon tech:prometheus
+                description 'HTTP-скрейпинг /actuator/prometheus, nginx-exporter, postgres_exporter и др. Метрики из приложений по OTLP — через OpenTelemetry Collector (отдельный контейнер).'
+            }
+            otel-collector = container 'OpenTelemetry Collector' {
+                summary 'Приём OTLP (метрики, трейсы) от приложений; экспорт в хранилище метрик и в Jaeger/Zipkin'
+                technology '[OpenTelemetry Collector]'
+                icon tech:vector
+                description 'Единая точка приёма OTLP от микросервисов и API Gateway. Пайплайны: traces → Jaeger/Zipkin; metrics → remote write в Prometheus TSDB / VictoriaMetrics (2.09, NFR-009).'
+            }
+            trace-backend = container 'Распределённая трассировка' {
+                summary 'Хранение и UI трейсов: Jaeger или Zipkin (NFR-009)'
+                technology '[Jaeger / Zipkin]'
+                icon bootstrap:share
+                description 'Бэкенд distributed tracing: приём спанов от OTel Collector; встроенный веб-UI Jaeger/Zipkin. Grafana (контейнер «Представление логов…») подключается datasource-ом для Explore и дашбордов. Поиск по trace_id, связка с логами (trace_id в Vector/Elasticsearch, 2.09).'
+            }
+            apm-platform = container 'APM' {
+                summary 'Application Performance Monitoring: New Relic, Datadog или согласованный аналог (NFR-009)'
+                technology '[New Relic / Datadog]'
+                icon bootstrap:activity
+                description 'Глубокая диагностика производительности приложений: транзакции, профилирование, узкие места. Агенты/SDK в сервисах; дополняет Prometheus/Grafana, не заменяет RED-алерты (2.09).'
             }
             metrics-storage = container 'Хранилище метрик' {
                 summary 'Временные ряды, retention (real-time / 7 дней / 90 дней)'
@@ -202,10 +222,10 @@ model{
                 description 'Хранилище временных рядов метрик. Retention: real-time, 7 и 90 дней. PromQL-запросы для дашбордов и правил алертов.'
             }
             alerting = container 'Алертинг' {
-                summary 'Правила алертов, группировка, уведомления (PagerDuty, Slack, Email)'
-                technology '[Grafana Alerting]'
+                summary 'Правила алертов, группировка, маршрутизация в PagerDuty, Slack, Email'
+                technology '[Alertmanager / Grafana Alerting]'
                 icon bootstrap:bell
-                description 'Вычисление правил алертов по метрикам, группировка и дедупликация, маршрутизация уведомлений в PagerDuty, Slack, Email.'
+                description 'Оценка правил по метрикам (запросы к хранилищу временных рядов и/или через Grafana), группировка и дедупликация, отправка во внешние каналы оповещений (2.09, 2.10).'
             }
         }
 
@@ -221,6 +241,10 @@ model{
         }
         notification = system_ext 'Уведомления'{
             summary 'Отправка уведомлений пользователям'
+        }
+        ops_alert_channels = system_ext 'Каналы алертинга (операции)' {
+            summary 'PagerDuty, Slack, Email для SRE и дежурных; webhooks и SMTP (2.09, 2.10)'
+            technology 'HTTPS, SMTP'
         }
     }
 
@@ -312,6 +336,28 @@ model{
     monitoring.metrics-collector -[http]-> event-bus 'Сбор метрик Kafka' 'HTTP/JMX, JMX Exporter 9999' { #sync }
     monitoring.metrics-collector -[http]-> iam 'Сбор метрик Keycloak/IAM' 'HTTP GET /metrics, порт 9090' { #sync }
 
+    // Observability: OTLP от приложений → OpenTelemetry Collector → трейсы (Jaeger/Zipkin), метрики (remote write)
+    api-gateway -[http]-> monitoring.otel-collector 'OTLP: метрики и трейсы (W3C Trace Context)' 'HTTP/gRPC OTLP 4317/4318' { #async }
+    user-service -[http]-> monitoring.otel-collector 'OTLP: метрики и трейсы' 'HTTP/gRPC OTLP 4317/4318' { #async }
+    request-processing-service -[http]-> monitoring.otel-collector 'OTLP: метрики и трейсы' 'HTTP/gRPC OTLP 4317/4318' { #async }
+    payment-service -[http]-> monitoring.otel-collector 'OTLP: метрики и трейсы' 'HTTP/gRPC OTLP 4317/4318' { #async }
+    notification-service -[http]-> monitoring.otel-collector 'OTLP: метрики и трейсы' 'HTTP/gRPC OTLP 4317/4318' { #async }
+    audit-service -[http]-> monitoring.otel-collector 'OTLP: метрики и трейсы' 'HTTP/gRPC OTLP 4317/4318' { #async }
+
+    // APM (New Relic / Datadog): агенты/SDK в приложениях
+    api-gateway -[https]-> monitoring.apm-platform 'APM agent / SDK' 'HTTPS, ingest API' { #async }
+    user-service -[https]-> monitoring.apm-platform 'APM agent / SDK' 'HTTPS, ingest API' { #async }
+    request-processing-service -[https]-> monitoring.apm-platform 'APM agent / SDK' 'HTTPS, ingest API' { #async }
+    payment-service -[https]-> monitoring.apm-platform 'APM agent / SDK' 'HTTPS, ingest API' { #async }
+    notification-service -[https]-> monitoring.apm-platform 'APM agent / SDK' 'HTTPS, ingest API' { #async }
+    audit-service -[https]-> monitoring.apm-platform 'APM agent / SDK' 'HTTPS, ingest API' { #async }
+
+    otel-collector -[http]-> trace-backend 'Экспорт трейсов (OTLP/Jaeger gRPC)' 'HTTP/gRPC' { #async }
+    otel-collector -[http]-> metrics-storage 'Remote write метрик (OTLP → TSDB)' 'HTTP, Prometheus remote write / VM' { #sync }
+
+    // Трейсы: просмотр через встроенный UI Jaeger/Zipkin и/или Grafana (Explore, datasource)
+    log-ui -[http]-> trace-backend 'Запросы трасс (datasource, Explore)' 'HTTP, Jaeger Query API / Zipkin API' { #sync }
+
     // Внутри системы мониторинга: поток логов
     log-collector -[tcp]-> log-bus 'Пересылка логов в шину' 'TCP, Kafka Protocol' { #async }
     log-bus -[tcp]-> log-processor 'Чтение из топиков' 'TCP, Kafka Protocol' { #async }
@@ -321,5 +367,9 @@ model{
     // Внутри системы мониторинга: поток метрик
     metrics-collector -[http]-> metrics-storage 'Скрейпинг и запись метрик' 'HTTP, remote write / scrape' { #sync }
     metrics-storage -[http]-> log-ui 'Запросы к временным рядам (PromQL)' 'HTTP, Prometheus Query API' { #sync }
-    metrics-storage -[http]-> alerting 'Вычисление правил алертов' 'HTTP, Prometheus Alertmanager' { #sync }
+    metrics-storage -[http]-> alerting 'Запросы для правил алертов (PromQL)' 'HTTP, Prometheus / Alertmanager API' { #sync }
+
+    // Алертинг: уведомления во внешние каналы; при Grafana Alerting — также опрос дата-сорсов из UI
+    alerting -[https]-> ops_alert_channels 'Доставка алертов' 'HTTPS webhooks (PagerDuty, Slack); SMTP (Email)' { #async }
+    log-ui -[http]-> alerting 'Правила и оценка (Grafana Alerting)' 'HTTP, внутренний API / datasource queries' { #sync }
 }

@@ -29,13 +29,13 @@ views {
 
     view monitoring_container of system.monitoring {
         title 'System/Система мониторинга/Контейрная диаграмма'
-        description 'Логи: сбор → Kafka → обработка → хранение → представление. Метрики: сбор → хранение → дашборды и алертинг'
+        description 'Логи: сбор → Kafka → обработка → хранение → Grafana. Метрики: Prometheus scrape → TSDB → Grafana/алерты. OTLP: OpenTelemetry Collector → Jaeger/Zipkin и remote write метрик. APM: New Relic/Datadog (NFR-009, 2.09). Алертинг → внешние каналы (PagerDuty, Slack, Email).'
 
         include system,
                 monitoring,
                 monitoring.*,
-                system.*
-                // system.*
+                system.*,
+                // system_ext.ops_alert_channels
     }
     view backend_container of system.backend {
         title 'System/Обработка пользовательских запросов/Контейнерная диаграмма'
@@ -57,8 +57,8 @@ views {
     }
 
     view access_control_rbac of system {
-        title 'System/Схема архитектуры управления доступами с RBAC'
-        description 'Аутентификация (JWT, IAM), авторизация (RBAC на API Gateway и User Service), аудит безопасности (события 401/403, логин, роли → Event Bus → Audit Service), хранение секретов (Vault). Связь с 3.01, 3.02, 3.04.'
+        title 'System/Безопасность/Схема архитектуры управления доступами с RBAC'
+        description 'Аутентификация (JWT, IAM), авторизация RBAC. Аудит: 401/403, логин, смена ролей → Event Bus → Audit Service. Секреты: Vault. Документы 3.01, 3.02, 3.04.'
 
         include users,
                 users.*,
@@ -73,8 +73,8 @@ views {
                 system.storage.postgres-master,
                 system.event-bus,
                 system.secrets-vault,
-                system.monitoring.alerting,
                 system_ext,
                 system_ext.iam_ext
+                
     }
 }
