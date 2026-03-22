@@ -77,4 +77,30 @@ views {
                 system_ext.iam_ext
                 
     }
+
+    deployment view deployment_production {
+        title 'System/Развёртывание/Production'
+        description 'Edge: WAF/CDN. Регион A: VM (LB, IAM, PG, Redis, Kafka, Vault, MinIO, o11y storage) + K8s (ingress, gateway, backend, observability). Регион B: DR (PG replicas, Kafka, Redis, сокращённый K8s). Регион C: две гео-копии backup-storage (NFR-006, NFR-007, 4.01).'
+
+        include production.**,
+                production
+    }
+
+    deployment view deployment_staging {
+        title 'System/Развёртывание/Staging'
+        description 'VM: stateful + LB + IAM; Kubernetes: объединённый ns приложений и лёгкий o11y.'
+
+        include staging.**,
+                staging
+    }
+
+    deployment view deployment_all {
+        title 'System/Развёртывание/Все среды'
+        description 'Production: multi-region (edge + primary + DR + гео-бэкапы) и Staging (упрощённый контур).'
+
+        include production.**,
+                staging.**,
+                production,
+                staging
+    }
 }

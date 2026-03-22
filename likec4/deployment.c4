@@ -1,0 +1,289 @@
+// Развёртывание: 2.08, 2.13, 3.04, 4.01; согласование с NFR-003, NFR-006, NFR-007 (multi-region), NFR-005 (edge).
+// VM — stateful / периметр / IAM; Kubernetes — горизонтально масштабируемые сервисы и o11y.
+
+deployment {
+
+  environment production {
+    title 'Production'
+    summary 'Три географических контура: основной регион (multi-AZ), DR-регион, геораспределённые бэкапы (NFR-006, NFR-007). Edge: WAF/CDN (NFR-005).'
+
+    // ---- Периметр: до контейнеров логической модели (managed edge) ----
+    zone edge_security {
+      title 'Edge: WAF, CDN, DDoS (NFR-005)'
+      summary 'Управляемые сервисы провайдера перед Nginx LB; TLS 1.3 до edge; не дублируют контейнеры в model.c4'
+
+      vm vm_edge_waf_cdn {
+        title 'WAF / CDN / DDoS mitigation (managed)'
+        summary 'CloudFront+WAF, Cloudflare, Akamai и т.п.; rate limit и geo-блокировка на периметре'
+        technology 'Managed edge'
+      }
+    }
+
+    // ---- Регион 1: основной (multi-AZ внутри региона — в подписях узлов) ----
+    zone region_primary {
+      title 'Регион A (основной): вычисления и первичные данные'
+      summary 'Multi-AZ внутри региона; RPO=0 для записи в master (2.13)'
+
+      zone vm_infrastructure {
+        title 'Слой VM (вне Kubernetes)'
+        summary 'PostgreSQL, Redis, Kafka, Vault, MinIO (операционные бэкапы), ES/метрики/трейсы, Keycloak, Nginx LB — ВМ в разных АЗ региона A'
+
+        vm vm_perimeter {
+          title 'VM: периметр (Nginx / HAProxy)'
+          summary 'За WAF/CDN; TLS termination; ≥2 ВМ в разных АЗ; health → LB каждые 10 с (NFR-003)'
+          technology 'Linux VM'
+          instanceOf system.load-balancer
+        }
+
+        vm vm_iam {
+          title 'VM: Keycloak (IAM)'
+          summary '≥2 инстанса HA; liveness/readiness 10 с (NFR-003); 3.01'
+          technology 'Linux VM'
+          instanceOf system.iam
+        }
+
+        vm vm_postgresql {
+          title 'VM: PostgreSQL (регион A)'
+          summary 'Master + синхронные streaming replicas в АЗ; RPO=0; PgBouncer (2.13)'
+          technology 'Linux VM'
+          pg_master_a = instanceOf system.storage.postgres-master {
+            title 'PostgreSQL primary (регион A)'
+          }
+          pg_replicas_a = instanceOf system.storage.postgres-replicas {
+            title 'Read replicas (внутри региона A, синхронные)'
+          }
+        }
+
+        vm vm_redis {
+          title 'VM: Redis Cluster'
+          summary '≥3 узла в разных АЗ; failover (NFR-003, NFR-007)'
+          technology 'Linux VM'
+          redis_cluster_a = instanceOf system.storage.cache {
+            title 'Redis Cluster (регион A)'
+          }
+        }
+
+        vm vm_kafka {
+          title 'VM: Kafka (Event Bus + шина логов)'
+          summary 'Брокеры в АЗ; min.insync.replicas ≥ 2; отдельные топики app / logs (2.08)'
+          technology 'Linux VM'
+          kafka_events_a = instanceOf system.event-bus {
+            title 'Kafka: Event Bus (регион A)'
+          }
+          kafka_logs_a = instanceOf system.monitoring.log-bus {
+            title 'Kafka: топики логов (регион A)'
+          }
+        }
+
+        vm vm_vault {
+          title 'VM: HashiCorp Vault'
+          summary 'HA; репликация/DR политика между регионами; 3.04'
+          technology 'Linux VM'
+          instanceOf system.secrets-vault
+        }
+
+        vm vm_object_storage {
+          title 'VM: объектное хранилище бэкапов (регион A)'
+          summary 'MinIO/S3; приём WAL/снимков из PG региона A; репликация/копирование в регионы бэкапов (NFR-006)'
+          technology 'Linux VM'
+          backup_primary_a = instanceOf system.storage.backup-storage {
+            title 'Объектное хранилище бэкапов (регион A)'
+          }
+        }
+
+        vm vm_observability_storage {
+          title 'VM: хранилища наблюдаемости'
+          summary 'Elasticsearch, Prometheus TSDB/VictoriaMetrics, Jaeger; диск и retention (2.09, NFR-009)'
+          technology 'Linux VM'
+          instanceOf system.monitoring.log-storage
+          instanceOf system.monitoring.metrics-storage
+          instanceOf system.monitoring.trace-backend
+        }
+      }
+
+      zone k8s_workloads {
+        title 'Kubernetes (регион A)'
+        summary 'Кластер в нескольких АЗ; node pools; HPA; rolling updates; probes liveness/readiness каждые 10 с (NFR-003, NFR-004)'
+
+        kubernetes k8s_prod {
+          title 'Кластер Kubernetes (prod, регион A)'
+          summary 'DaemonSet Fluent Bit; Deployment с probes; HPA на Gateway и сервисах'
+          technology 'Kubernetes 1.29+'
+
+          kubernetes_namespace ns_ingress {
+            title 'ns: ingress-static'
+            summary 'SPA (front); Ingress Controller; readiness для исключения из балансировки'
+            instanceOf system.front
+          }
+
+          kubernetes_namespace ns_gateway {
+            title 'ns: api-gateway'
+            summary 'Spring Cloud Gateway; HPA; ≥3 реплики в разных АЗ; p95 budget (NFR-002, 2.08)'
+            instanceOf system.api-gateway
+          }
+
+          kubernetes_namespace ns_backend {
+            title 'ns: backend'
+            summary 'Микросервисы; ≥3 реплики критичных; Database per Service; секреты из Vault'
+            instanceOf system.backend.user-service
+            instanceOf system.backend.request-processing-service
+            instanceOf system.backend.payment-service
+            instanceOf system.backend.notification-service
+            instanceOf system.backend.audit-service
+          }
+
+          kubernetes_namespace ns_observability {
+            title 'ns: observability'
+            summary 'Fluent Bit (DS), Vector, Grafana, Prometheus, OTel, Alertmanager, APM-агенты (2.09, NFR-009)'
+            instanceOf system.monitoring.log-collector
+            instanceOf system.monitoring.log-processor
+            instanceOf system.monitoring.log-ui
+            instanceOf system.monitoring.metrics-collector
+            instanceOf system.monitoring.otel-collector
+            instanceOf system.monitoring.alerting
+            instanceOf system.monitoring.apm-platform
+          }
+        }
+      }
+    }
+
+    // ---- Регион 2: DR (активный тёплый резерв / чтение, NFR-007) ----
+    zone region_dr {
+      title 'Регион B (DR / второй географический контур)'
+      summary 'Асинхронная репликация БД из региона A; Kafka MirrorMaker 2 или второй кластер; при аварии A — переключение трафика (RTO, NFR-003)'
+
+      vm vm_dr_postgresql {
+        title 'VM: PostgreSQL (standby / replicas в регионе B)'
+        summary 'Logical read replicas / hot standby; лаг мониторится; промоут при DR'
+        technology 'Linux VM'
+        pg_standby_b = instanceOf system.storage.postgres-replicas {
+          title 'PostgreSQL DR standby / read replica (регион B)'
+        }
+      }
+
+      vm vm_dr_kafka {
+        title 'VM: Kafka (регион B)'
+        summary 'Репликация топиков из региона A; потребители DR-сценария'
+        technology 'Linux VM'
+        kafka_events_b = instanceOf system.event-bus {
+          title 'Kafka: Event Bus (регион B, зеркало)'
+        }
+      }
+
+      vm vm_dr_redis {
+        title 'VM: Redis (регион B, реплика/кластер)'
+        summary 'Cross-region replica или отдельный кластер для DR; инвалидация при переключении'
+        technology 'Linux VM'
+        redis_dr_b = instanceOf system.storage.cache {
+          title 'Redis (регион B, cross-region replica)'
+        }
+      }
+
+      kubernetes k8s_dr {
+        title 'Kubernetes (регион B, сокращённый контур)'
+        summary 'Warm standby: минимальные реплики Gateway и критичных сервисов; масштабирование при failover'
+
+        kubernetes_namespace ns_dr_standby {
+          title 'ns: dr-standby'
+          summary 'API Gateway + критичные микросервисы в уменьшенном составе'
+          instanceOf system.api-gateway
+          instanceOf system.backend.user-service
+          instanceOf system.backend.request-processing-service
+          instanceOf system.backend.payment-service
+        }
+      }
+    }
+
+    // ---- Регион 3 (и копии бэкапов): геораспределённое хранение (NFR-006) ----
+    zone region_backup_geography {
+      title 'Регион C + копии: гео-бэкапы (≥2 региона отдельно от primary)'
+      summary 'Независимые площадки для копий снимков/WAL; иная юрисдикция/аккаунт облака (NFR-006)'
+
+      vm vm_backup_site_b {
+        title 'VM: хранилище бэкапов (гео-копия B)'
+        summary 'Репликация/копирование из региона A; immutable backup при необходимости'
+        technology 'Linux VM / Object lock'
+        backup_geo_b = instanceOf system.storage.backup-storage {
+          title 'Гео-копия бэкапов (площадка B)'
+        }
+      }
+
+      vm vm_backup_site_c {
+        title 'VM: хранилище бэкапов (гео-копия C)'
+        summary 'Вторая удалённая копия; контроль 3-2-1'
+        technology 'Linux VM / Object lock'
+        backup_geo_c = instanceOf system.storage.backup-storage {
+          title 'Гео-копия бэкапов (площадка C)'
+        }
+      }
+    }
+
+    // Edge -> периметр приложения (трафик пользователей после WAF/CDN).
+    vm_edge_waf_cdn -[https]-> vm_perimeter 'HTTPS' 'Трафик после edge к Nginx LB в регионе A'
+
+    // ---- Связи между регионами (deployment relationships, likec4.dev/dsl/deployment/model) ----
+    // Рёбра между экземплярами одного логического элемента; направление A -> B (источник слева в паре из доки LikeC4: target - source).
+    // PostgreSQL: standby в B подписан на поток из контура A (источник записи — primary в A; см. 2.13).
+    vm_postgresql.pg_replicas_a -[tcp]-> vm_dr_postgresql.pg_standby_b 'PostgreSQL replication A to B' 'Streaming or logical replication; async cross-region'
+
+    // Kafka: MirrorMaker 2 / Cluster Linking.
+    vm_kafka.kafka_events_a -[tcp]-> vm_dr_kafka.kafka_events_b 'Kafka MM2 / cluster linking' 'Async topic replication A to B'
+
+    // Redis: cross-region read replica.
+    vm_redis.redis_cluster_a -[tcp]-> vm_dr_redis.redis_dr_b 'Redis cross-region replica' 'Async replica / Global Datastore pattern'
+
+    // Объектные бэкапы: регион A -> гео-копии B и C.
+    vm_object_storage.backup_primary_a -[https]-> vm_backup_site_b.backup_geo_b 'Backup geo-replication' 'Cross-region copy to site B'
+    vm_object_storage.backup_primary_a -[https]-> vm_backup_site_c.backup_geo_c 'Backup geo-replication' 'Cross-region copy to site C'
+  }
+
+  environment staging {
+    title 'Staging / Pre-prod'
+    summary 'Упрощённо: без полного DR-трёхрегионного контура; тесты миграций и регрессии'
+
+    zone staging_vm {
+      title 'VM: stateful (staging)'
+      vm vm_staging_data {
+        title 'VM: БД, кэш, Kafka (staging)'
+        instanceOf system.storage.postgres-master
+        instanceOf system.storage.postgres-replicas
+        instanceOf system.storage.cache
+        instanceOf system.event-bus
+        instanceOf system.monitoring.log-bus
+      }
+      vm vm_staging_vault {
+        title 'VM: Vault (staging)'
+        instanceOf system.secrets-vault
+      }
+      vm vm_staging_lb {
+        title 'VM: LB (staging)'
+        instanceOf system.load-balancer
+      }
+      vm vm_staging_iam {
+        title 'VM: Keycloak (staging)'
+        instanceOf system.iam
+      }
+    }
+
+    zone staging_k8s {
+      title 'Kubernetes (staging)'
+      kubernetes k8s_staging {
+        title 'Кластер Kubernetes (staging)'
+        kubernetes_namespace ns_staging_apps {
+          title 'ns: apps (staging)'
+          summary 'Front, Gateway, микросервисы, базовые агенты o11y; probes как в prod'
+          instanceOf system.front
+          instanceOf system.api-gateway
+          instanceOf system.backend.user-service
+          instanceOf system.backend.request-processing-service
+          instanceOf system.backend.payment-service
+          instanceOf system.backend.notification-service
+          instanceOf system.backend.audit-service
+          instanceOf system.monitoring.log-collector
+          instanceOf system.monitoring.metrics-collector
+          instanceOf system.monitoring.otel-collector
+        }
+      }
+    }
+  }
+}
