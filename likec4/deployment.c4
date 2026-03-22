@@ -1,11 +1,15 @@
 // Развёртывание: 2.08, 2.13, 3.04, 4.01; согласование с NFR-003, NFR-006, NFR-007 (multi-region), NFR-005 (edge).
 // VM — stateful / периметр / IAM; Kubernetes — горизонтально масштабируемые сервисы и o11y.
+//
+// База сайзинга (док. 1.02 NFR-001/002, 2.13): пик 200k RPS, среднее 50k RPS; доля API с обращением к БД ~25% после кэша;
+// объёмы БД — порядок из 2.13 (requests_db до ~2 ТБ, audit/users/payments/notifications); Redis горячий слой 150–200 ГБ;
+// запас по CPU/RAM 30% (NFR-008 целевое использование ≤80%). Итоги — ориентир для заказа ВМ/пулов; уточняются нагрузочным тестом (4.03).
 
 deployment {
 
   environment production {
     title 'Production'
-    summary 'Три географических контура: основной регион (multi-AZ), DR-регион, геораспределённые бэкапы (NFR-006, NFR-007). Edge: WAF/CDN (NFR-005).'
+    summary 'Три географических контура: основной регион (multi-AZ), DR-регион, геораспределённые бэкапы (NFR-006, NFR-007). Edge: WAF/CDN (NFR-005). Сайзинг CPU/RAM/HDD — в description узлов и таблица 4.01.'
 
     // ---- Периметр: до контейнеров логической модели (managed edge) ----
     zone edge_security {
@@ -16,6 +20,11 @@ deployment {
         title 'WAF / CDN / DDoS mitigation (managed)'
         summary 'CloudFront+WAF, Cloudflare, Akamai и т.п.; rate limit и geo-блокировка на периметре'
         technology 'Managed edge'
+        description '''
+          *Сайзинг:* vCPU/RAM не заказываются у облака как ВМ — *по тарифу провайдера*.
+          *Параметр расчёта:* пик **200k RPS** (NFR-002) + раздача статики SPA; запас на всплески **×1,25**.
+          *Эквивалент:* пропускная способность edge ≥ **250k req/s** (агрегат по PoP); WAF inspect — лимиты по правилам и телу запроса (см. 3.01).
+        '''
       }
     }
 
@@ -32,6 +41,11 @@ deployment {
           title 'VM: периметр (Nginx / HAProxy)'
           summary 'За WAF/CDN; TLS termination; ≥2 ВМ в разных АЗ; health → LB каждые 10 с (NFR-003)'
           technology 'Linux VM'
+          description '''
+            *Суммарно (кластер LB, 4 узла в 3 АЗ):* **32 vCPU**, **64 GiB RAM**, **~0,8 TiB** SSD (OS + логи; без кэша тела).
+            *Формула:* пик **200k RPS** TLS/L7; ориентир **~6–8k RPS** на узел при профиле API + keep-alive; **⌈200/7⌉ ≈ 29** → **4 узла по 8 vCPU** с запасом **×1,1** по CPU.
+            *RAM:* **~2 GiB** на 1k активных SSL + буферы; итого **≥16 GiB/узел**.
+          '''
           instanceOf system.load-balancer
         }
 
@@ -39,6 +53,10 @@ deployment {
           title 'VM: Keycloak (IAM)'
           summary '≥2 инстанса HA; liveness/readiness 10 с (NFR-003); 3.01'
           technology 'Linux VM'
+          description '''
+            *Суммарно (3 узла HA):* **12 vCPU**, **48 GiB RAM**, **~0,15 TiB** SSD.
+            *Формула:* **~2–3k auth-introspect RPS** на пик (доля от 200k после кэша JWT на шлюзе); **4 vCPU + 16 GiB** на инстанс Keycloak × **3** (кворум).
+          '''
           instanceOf system.iam
         }
 
@@ -46,11 +64,22 @@ deployment {
           title 'VM: PostgreSQL (регион A)'
           summary 'Master + синхронные streaming replicas в АЗ; RPO=0; PgBouncer (2.13)'
           technology 'Linux VM'
+          description '''
+            *Суммарно (1 primary + 2 sync replica в регионе A):* **80 vCPU**, **640 GiB RAM**, **~14 TiB** NVMe/SSD (данные+WAL+резерв).
+            *Диск:* горячие БД по 2.13 (сумма порядка **~3–4 TiB** данных) × **3 копии** (master+2 replica) + **WAL 7–14 дней** + **рост 30%/год** + **индексы/PITR** → округление **~14 TiB**.
+            *CPU/RAM:* **~50k** пиковых запросов/с к БД (25% от 200k RPS); **~32 vCPU / 256 GiB** shared_buffers на primary; реплики **2×(24 vCPU, 192 GiB)** для чтения.
+          '''
           pg_master_a = instanceOf system.storage.postgres-master {
             title 'PostgreSQL primary (регион A)'
+            description '''
+              *Узел primary:* **32 vCPU**, **256 GiB RAM**, **~5 TiB** быстрый диск (данные доменов + WAL hot).
+            '''
           }
           pg_replicas_a = instanceOf system.storage.postgres-replicas {
             title 'Read replicas (внутри региона A, синхронные)'
+            description '''
+              *2× replica (сумма):* **48 vCPU**, **384 GiB RAM**, **~9 TiB** — зеркало данных и чтение.
+            '''
           }
         }
 
@@ -58,6 +87,10 @@ deployment {
           title 'VM: Redis Cluster'
           summary '≥3 узла в разных АЗ; failover (NFR-003, NFR-007)'
           technology 'Linux VM'
+          description '''
+            *Суммарно (3 шарда/узла кластера):* **24 vCPU**, **192 GiB RAM**, **~0,5 TiB** SSD (AOF/RDB снимки).
+            *Формула:* горячий объём **150–200 GiB** (2.13) + **репликация ×2** в RAM → **~64 GiB RAM/узел**; **8 vCPU/узел** на пик **~200k** ключевых операций/с в совокупности с сетью.
+          '''
           redis_cluster_a = instanceOf system.storage.cache {
             title 'Redis Cluster (регион A)'
           }
@@ -67,6 +100,10 @@ deployment {
           title 'VM: Kafka (Event Bus + шина логов)'
           summary 'Брокеры в АЗ; min.insync.replicas ≥ 2; отдельные топики app / logs (2.08)'
           technology 'Linux VM'
+          description '''
+            *Суммарно (3 брокера, RF=3):* **24 vCPU**, **96 GiB RAM**, **~6 TiB** SSD (логи сегментов).
+            *Формула:* пик событий приложения **~30–50k msg/s** + лог-шина **~100 MB/s** с retention **24–72 ч** → диск **~2 TiB/брокер** ориентир; **8 vCPU, 32 Gi RAM** на брокер.
+          '''
           kafka_events_a = instanceOf system.event-bus {
             title 'Kafka: Event Bus (регион A)'
           }
@@ -79,6 +116,10 @@ deployment {
           title 'VM: HashiCorp Vault'
           summary 'HA; репликация/DR политика между регионами; 3.04'
           technology 'Linux VM'
+          description '''
+            *Суммарно (3 узла Raft):* **12 vCPU**, **48 GiB RAM**, **~0,3 TiB** SSD.
+            *Формула:* низкий steady RPS (**~1–3k** unwrap/lease); **4 vCPU + 16 GiB** × **3** для HA и burst при rolling restart.
+          '''
           instanceOf system.secrets-vault
         }
 
@@ -86,6 +127,10 @@ deployment {
           title 'VM: объектное хранилище бэкапов (регион A)'
           summary 'MinIO/S3; приём WAL/снимков из PG региона A; репликация/копирование в регионы бэкапов (NFR-006)'
           technology 'Linux VM'
+          description '''
+            *Суммарно (кластер MinIO/S3, 4 узла erasure):* **32 vCPU**, **128 GiB RAM**, **~40 TiB** HDD/SSD (бэкапы + версии объектов).
+            *Формула:* полный снимок БД **~4 TiB** × **еженедельно × 4 недели** + **WAL непрерывно** + **рост** → **~25–35 TiB** полезных + **EC overhead ~1,35×**.
+          '''
           backup_primary_a = instanceOf system.storage.backup-storage {
             title 'Объектное хранилище бэкапов (регион A)'
           }
@@ -95,6 +140,10 @@ deployment {
           title 'VM: хранилища наблюдаемости'
           summary 'Elasticsearch, Prometheus TSDB/VictoriaMetrics, Jaeger; диск и retention (2.09, NFR-009)'
           technology 'Linux VM'
+          description '''
+            *Суммарно (логический «стек» на ВМ/кластере):* **48 vCPU**, **192 GiB RAM**, **~12 TiB** SSD/HDD.
+            *Формула:* логи **~100k EPS** эквивалент при 200k RPS (сэмплинг) → ES **~8 TiB** retention 14–30 дн; метрики **~2M active series**, **15 с** scrape → **~2 TiB** TSDB **90 дн**; трейсы **0,1–1%** выборка → **~1–2 TiB** Jaeger backend.
+          '''
           instanceOf system.monitoring.log-storage
           instanceOf system.monitoring.metrics-storage
           instanceOf system.monitoring.trace-backend
@@ -109,22 +158,37 @@ deployment {
           title 'Кластер Kubernetes (prod, регион A)'
           summary 'DaemonSet Fluent Bit; Deployment с probes; HPA на Gateway и сервисах'
           technology 'Kubernetes 1.29+'
+          description '''
+            *Control plane (3 узла):* **12 vCPU**, **48 GiB RAM**, **~0,5 TiB** SSD etcd/система.
+            *Worker pool (ориентир **18 узлов**):* **576 vCPU**, **2304 GiB RAM**, **~9 TiB** локальный SSD (emptyDir/containerd).
+            *Формула workers:* пик **200k RPS**; Gateway **~8–10k RPS/под** (2 vCPU, 4 GiB) → **~24 пода** → **48 vCPU**; Request Processing **~40%** трафика → **~80k RPS** → **~2k RPS/под** (2 vCPU) → **40 подов** → **80 vCPU**; остальные сервисы **~120 vCPU**; Fluent Bit/Vector/OTel **~36 vCPU** (DS на каждом узле); запас **~30%** и HPA headroom → **~576 vCPU** суммарно на workers.
+            *Диск:* преимущественно не для ПД; объёмы логов — на VM observability / Kafka.
+          '''
 
           kubernetes_namespace ns_ingress {
             title 'ns: ingress-static'
             summary 'SPA (front); Ingress Controller; readiness для исключения из балансировки'
+            description '''
+              *Доля кластера:* **~6% CPU**, **~5% RAM** — Ingress Controller **3×(2 vCPU, 2 GiB)**; статика SPA на CDN/объекте, в кластере — конфиги и fallback.
+            '''
             instanceOf system.front
           }
 
           kubernetes_namespace ns_gateway {
             title 'ns: api-gateway'
             summary 'Spring Cloud Gateway; HPA; ≥3 реплики в разных АЗ; p95 budget (NFR-002, 2.08)'
+            description '''
+              *Доля кластера:* **~8% CPU** — **24 пода** × **2 vCPU** (HPA max под пик 200k RPS); RAM **~96 GiB** (4 GiB/под).
+            '''
             instanceOf system.api-gateway
           }
 
           kubernetes_namespace ns_backend {
             title 'ns: backend'
             summary 'Микросервисы; ≥3 реплики критичных; Database per Service; секреты из Vault'
+            description '''
+              *Доля кластера:* **~55% CPU** пула workers — user **~12 подов**, request-processing **~40 подов**, payment **~10**, notification **~8**, audit **~6** (оценка **2 vCPU/под**, HPA); RAM подов backend **~1200 GiB** суммарно (**~4 GiB/под** в среднем).
+            '''
             instanceOf system.backend.user-service
             instanceOf system.backend.request-processing-service
             instanceOf system.backend.payment-service
@@ -135,6 +199,9 @@ deployment {
           kubernetes_namespace ns_observability {
             title 'ns: observability'
             summary 'Fluent Bit (DS), Vector, Grafana, Prometheus, OTel, Alertmanager, APM-агенты (2.09, NFR-009)'
+            description '''
+              *Доля кластера:* **~25% CPU** пула workers — агенты на всех worker + Grafana/Prometheus/OTel/Alertmanager в подах; RAM **~580 GiB** суммарно (**~25%** от **2304 GiB** workers; в т.ч. Prometheus **~64 GiB**, OTel **~16 GiB**, Grafana **~8 GiB**, DS).
+            '''
             instanceOf system.monitoring.log-collector
             instanceOf system.monitoring.log-processor
             instanceOf system.monitoring.log-ui
@@ -156,6 +223,10 @@ deployment {
         title 'VM: PostgreSQL (standby / replicas в регионе B)'
         summary 'Logical read replicas / hot standby; лаг мониторится; промоут при DR'
         technology 'Linux VM'
+        description '''
+          *Суммарно (DR standby / реплики):* **48 vCPU**, **384 GiB RAM**, **~9 TiB** NVMe (копия набора данных региона A без полного удвоения нагрузки записи).
+          *Формула:* **~60%** от суммарных ресурсов read-tier A при warm standby; диск ≈ объём реплик A.
+        '''
         pg_standby_b = instanceOf system.storage.postgres-replicas {
           title 'PostgreSQL DR standby / read replica (регион B)'
         }
@@ -165,6 +236,10 @@ deployment {
         title 'VM: Kafka (регион B)'
         summary 'Репликация топиков из региона A; потребители DR-сценария'
         technology 'Linux VM'
+        description '''
+          *Суммарно (3 брокера mirror):* **16 vCPU**, **64 GiB RAM**, **~3 TiB** SSD.
+          *Формула:* **~50%** брокерных ресурсов региона A; retention короче до failover, основной объём — зеркало топиков.
+        '''
         kafka_events_b = instanceOf system.event-bus {
           title 'Kafka: Event Bus (регион B, зеркало)'
         }
@@ -174,6 +249,10 @@ deployment {
         title 'VM: Redis (регион B, реплика/кластер)'
         summary 'Cross-region replica или отдельный кластер для DR; инвалидация при переключении'
         technology 'Linux VM'
+        description '''
+          *Суммарно (3 узла replica):* **12 vCPU**, **96 GiB RAM**, **~0,2 TiB** SSD.
+          *Формула:* cross-region replica набора ключей **~50%** горячего объёма A (**~100 GiB** в RAM) + запас на промоут.
+        '''
         redis_dr_b = instanceOf system.storage.cache {
           title 'Redis (регион B, cross-region replica)'
         }
@@ -182,10 +261,18 @@ deployment {
       kubernetes k8s_dr {
         title 'Kubernetes (регион B, сокращённый контур)'
         summary 'Warm standby: минимальные реплики Gateway и критичных сервисов; масштабирование при failover'
+        description '''
+          *Control plane (3 узла):* **12 vCPU**, **48 GiB RAM**, **~0,5 TiB** SSD.
+          *Workers (**6 узлов** warm):* **96 vCPU**, **384 GiB RAM**, **~3 TiB** локальный SSD.
+          *Формула:* **~15–20%** от `k8s_prod` workers — Gateway **6 подов**, user **4**, request-processing **6**, payment **4** (минимум до масштабирования при DR).
+        '''
 
         kubernetes_namespace ns_dr_standby {
           title 'ns: dr-standby'
           summary 'API Gateway + критичные микросервисы в уменьшенном составе'
+          description '''
+            *Доля DR-кластера:* **~90%** pod CPU кластера B — все перечисленные сервисы в сокращённых репликах; RAM **~320 GiB** подов.
+          '''
           instanceOf system.api-gateway
           instanceOf system.backend.user-service
           instanceOf system.backend.request-processing-service
@@ -203,6 +290,10 @@ deployment {
         title 'VM: хранилище бэкапов (гео-копия B)'
         summary 'Репликация/копирование из региона A; immutable backup при необходимости'
         technology 'Linux VM / Object lock'
+        description '''
+          *Суммарно (кластер объектного хранилища):* **16 vCPU**, **64 GiB RAM**, **~50 TiB** HDD (cold/geo).
+          *Формула:* **≈ полный зеркальный объём** `backup_primary_a` (**~40 TiB** полезных) + **версионирование** + **запас 20%**.
+        '''
         backup_geo_b = instanceOf system.storage.backup-storage {
           title 'Гео-копия бэкапов (площадка B)'
         }
@@ -212,6 +303,9 @@ deployment {
         title 'VM: хранилище бэкапов (гео-копия C)'
         summary 'Вторая удалённая копия; контроль 3-2-1'
         technology 'Linux VM / Object lock'
+        description '''
+          *Суммарно:* **16 vCPU**, **64 GiB RAM**, **~50 TiB** HDD — вторая независимая гео-копия (NFR-006), та же логика объёма, что и площадка B.
+        '''
         backup_geo_c = instanceOf system.storage.backup-storage {
           title 'Гео-копия бэкапов (площадка C)'
         }
@@ -239,12 +333,16 @@ deployment {
 
   environment staging {
     title 'Staging / Pre-prod'
-    summary 'Упрощённо: без полного DR-трёхрегионного контура; тесты миграций и регрессии'
+    summary 'Упрощённо: без полного DR-трёхрегионного контура; тесты миграций и регрессии. Сайзинг ~12–15% от prod вычислений, диски — сжатый набор данных.'
 
     zone staging_vm {
       title 'VM: stateful (staging)'
       vm vm_staging_data {
         title 'VM: БД, кэш, Kafka (staging)'
+        description '''
+          *Один узел (dev/stage combo):* **16 vCPU**, **64 GiB RAM**, **~2 TiB** SSD.
+          *Формула:* **~1/5** ресурсов суммарного `vm_postgresql`+`vm_redis`+`vm_kafka` prod по CPU/RAM; диск — под миграции и регрессию на подмножестве данных.
+        '''
         instanceOf system.storage.postgres-master
         instanceOf system.storage.postgres-replicas
         instanceOf system.storage.cache
@@ -253,14 +351,17 @@ deployment {
       }
       vm vm_staging_vault {
         title 'VM: Vault (staging)'
+        description '''*1 узел:* **2 vCPU**, **8 GiB RAM**, **100 GiB** SSD.'''
         instanceOf system.secrets-vault
       }
       vm vm_staging_lb {
         title 'VM: LB (staging)'
+        description '''*1 узел:* **2 vCPU**, **4 GiB RAM**, **100 GiB** SSD.'''
         instanceOf system.load-balancer
       }
       vm vm_staging_iam {
         title 'VM: Keycloak (staging)'
+        description '''*1 узел:* **4 vCPU**, **8 GiB RAM**, **100 GiB** SSD.'''
         instanceOf system.iam
       }
     }
@@ -269,9 +370,15 @@ deployment {
       title 'Kubernetes (staging)'
       kubernetes k8s_staging {
         title 'Кластер Kubernetes (staging)'
+        description '''
+          *Control plane (1–3 узла малых):* **8 vCPU**, **24 GiB RAM**, **~0,2 TiB**.
+          *Workers (**4 узла**):* **32 vCPU**, **128 GiB RAM**, **~1 TiB** SSD.
+          *Формула:* **~1/18** от worker pool `k8s_prod`; по 1–2 реплики сервисов и смоук o11y.
+        '''
         kubernetes_namespace ns_staging_apps {
           title 'ns: apps (staging)'
           summary 'Front, Gateway, микросервисы, базовые агенты o11y; probes как в prod'
+          description '''*Доля кластера:* **~85%** workers — все приложения и агенты в одном ns.'''
           instanceOf system.front
           instanceOf system.api-gateway
           instanceOf system.backend.user-service
