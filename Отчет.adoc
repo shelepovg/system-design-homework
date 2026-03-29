@@ -64,3 +64,16 @@
 . (+) Создана конфигурация Keycloak: _keycloak/realm-system-design.json_ (realm, токены 15 мин / refresh rotation, сессия 30 мин, brute-force protection, клиенты SPA/mobile/backend, роли ADMIN, OPERATOR, USER, VIEWER, SERVICE, SUPPORT, AUDITOR, BILLING), _keycloak/README.md_, _keycloak/apply-realm.sh_; ссылка в 3.01.
 . (+) Создана конфигурация Vault: политики ACL _vault/policies/*.hcl_ по сервисам (api-gateway, user-service, request-processing-service, payment-service, notification-service, audit-service, operator), пример конфигурации Database engine, _vault/README.md_, скрипт _vault/scripts/setup-policies.sh_; ссылка в 3.04.
 
+
+== ДЗ 6
+2026.03.29
+
+. (+) Реализованы и детализированы схемы развёртывания в LikeC4 (`likec4/deployment.c4`): зоны production (edge, регион A с ВМ и Kubernetes, DR, гео-бэкапы), staging, связи между контурами; в узлах зафиксированы метаданные сайзинга (`sizing_*`) и пояснения в описаниях.
+. (+) Дополнен документ _4.01 Схема развертывания_: ссылка на `deployment.c4`, принцип разделения ВМ и Kubernetes, таблица сайзинга по узлам deployment, раздел про размещение stateful-сервисов и приложений.
+. (+) Добавлена инфраструктура как код Terraform в каталоге `infra/terraform/`: VPC, подсети, шлюз, security groups, ALB, EC2 (app, postgresql, redis), S3, IAM; пример переменных и README.
+. (+) Добавлена автоматизация Ansible в `infra/ansible/`: роли установки Docker (и зависимостей) на ВМ приложений, установка и настройка PostgreSQL 15 (initdb, `listen_addresses`, `pg_hba`, пользователь, БД, схема через `community.postgresql`), плейбуки, пример инвентаря, group_vars, README.
+. (+) Подготовлены Dockerfile для контейнеризации backend по модели решения: `infra/docker/services/api-gateway/Dockerfile`, универсальный `infra/docker/services/spring-boot/Dockerfile` (JAR передаётся аргументом сборки); образ SPA LikeC4 в контур деплоя не включался.
+. (+) Подготовлены манифесты Kubernetes в `infra/k8s/`: namespaces (`api-gateway`, `backend`, `observability`), ConfigMap/Secret с плейсхолдерами интеграций, Deployment и ClusterIP Service для API Gateway и микросервисов, Ingress для `/api`, Kustomize (`kustomization.yaml`).
+. (+) Настроен пайплайн GitLab CI (`infra/gitlab/.gitlab-ci.yml`): обязательная проверка `kubectl kustomize infra/k8s`; условная сборка и push образа `api-gateway` при переменной `API_GATEWAY_JAR` (файл JAR извне репозитория); интеграционный тест образа (`/actuator/health`); ручной деплой на `main` (`kubectl apply -k`, при успешном тесте — `set image` и rollout); уведомления в Telegram на стадии `.post` при сбое пайплайна и при успешном деплое (MVP, переменные `TELEGRAM_*`).
+. (+) Заполнены документы _4.02 CICD процесс_ и _4.03 Планы тестирования_: соответствие пайплайна и артефактам репозитория, переменные CI/CD, связь с Terraform/Ansible и секретами (3.04), планы тестов и связь с GitHub Actions (Vitest LikeC4).
+

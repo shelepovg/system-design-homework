@@ -1,6 +1,6 @@
 === CI/CD процесс
 
-Описание согласовано с развёртыванием приложений в Kubernetes (регион A, `ns_gateway` / `ns_backend` в `likec4/deployment.c4`, документ *4.01 Схема развертывания*) и с артефактами в репозитории: `infra/gitlab/.gitlab-ci.yml`, `infra/docker/`, `infra/k8s/`, `infra/terraform/`, `infra/ansible/`.
+Описание согласовано с развёртыванием приложений в Kubernetes (регион A, `ns_gateway` / `ns_backend` в `likec4/deployment.c4`, документ *4.01 Схема развертывания* — интерактивные диаграммы развёртывания (`deployment_all`, `deployment_production`, `deployment_staging`) на https://shelepovg.github.io/system-design-homework/[GitHub Pages^], см. прямые ссылки в 4.01; растровые копии — `doc/images/deployment_*.png`) и с артефактами в репозитории: `infra/gitlab/.gitlab-ci.yml`, `infra/docker/`, `infra/k8s/`, `infra/terraform/`, `infra/ansible/`.
 
 В репозитории *нет* исходного кода микросервисов и API Gateway — только *Dockerfile*'ы (`infra/docker/services/api-gateway/Dockerfile`, `infra/docker/services/spring-boot/Dockerfile`), рассчитанные на упаковку уже собранного JAR. Соответственно, в GitLab CI *нет* шага Maven/Gradle по умолчанию; образ собирается только если в настройках CI передан файл с артефактом (см. ниже).
 

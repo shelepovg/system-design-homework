@@ -2,6 +2,19 @@
 
 Диаграмма развёртывания в LikeC4: файл `likec4/deployment.c4`.
 
+==== Схемы развёртывания 
+
+Ниже — ссылки на интерактивные представления `deployment_all`, `deployment_production`, `deployment_staging` из `likec4/views.c4` на опубликованном LikeC4 (GitHub Pages). Растровые экспорты тех же видов — в каталоге `doc/images/` (для вставки в документы без веб-просмотра).
+
+[[fig-deployment-all]]
+https://shelepovg.github.io/system-design-homework/view/deployment_all/[Сводное развёртывание `deployment_all` (LikeC4 на GitHub Pages)^] — сводный вид сред *production*, *staging* и географических контуров (edge, регион A, DR, гео-бэкапы).
+
+[[fig-deployment-production]]
+https://shelepovg.github.io/system-design-homework/view/deployment_production/[Развёртывание `deployment_production` (LikeC4 на GitHub Pages)^] — окружение *production*: зоны периметра, регион A (ВМ инфраструктуры и кластер Kubernetes), регион B (DR), гео-бэкапы.
+
+[[fig-deployment-staging]]
+https://shelepovg.github.io/system-design-homework/view/deployment_staging/[Развёртывание `deployment_staging` (LikeC4 на GitHub Pages)^] — окружение *staging*: упрощённый контур ВМ и Kubernetes для pre-production.
+
 *Production* — несколько вложенных *зон* внутри `environment production`:
 
 * *edge_security* — периметр *WAF / CDN / DDoS* (managed edge; NFR-005); до узла `vm_perimeter` (Nginx LB) в логической модели.

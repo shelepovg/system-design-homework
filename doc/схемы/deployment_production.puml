@@ -1,0 +1,498 @@
+@startuml
+title "Production"
+top to bottom direction
+
+hide stereotype
+skinparam ranksep 60
+skinparam nodesep 30
+skinparam {
+  arrowFontSize 10
+  defaultTextAlignment center
+  wrapWidth 200
+  maxMessageSize 100
+  shadowing false
+}
+
+skinparam rectangle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendAuditService>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam queue<<ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_logs_a>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionEdge_securityVm_edge_waf_cdn>>{
+  BackgroundColor #64748b
+  FontColor #f8fafc
+  BorderColor #475569
+}
+skinparam rectangle<<ProductionRegion_primaryVm_infrastructureVm_observability_storageLogStorage>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryVm_infrastructureVm_observability_storageMetricsStorage>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_drK8s_drNs_dr_standbyApiGateway>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_drK8s_drNs_dr_standbyUserService>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_drK8s_drNs_dr_standbyRequestProcessingService>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_drK8s_drNs_dr_standbyPaymentService>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryVm_infrastructureVm_perimeterLoadBalancer>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_ingressFront>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogProcessor>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogUi>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityAlerting>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_gatewayApiGateway>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendUserService>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendRequestProcessingService>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendPaymentService>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendNotificationService>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityOtelCollector>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityApmPlatform>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryVm_infrastructureVm_iamIam>>{
+  BackgroundColor #2b85e7
+  FontColor #f1ffff
+  BorderColor #1e73ce
+}
+skinparam rectangle<<ProductionRegion_primaryVm_infrastructureVm_redisRedis_cluster_a>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryVm_infrastructureVm_observability_storageTraceBackend>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam database<<ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_master_a>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam database<<ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_replicas_a>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam queue<<ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_events_a>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primaryVm_infrastructureVm_vaultSecretsVault>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam database<<ProductionRegion_primaryVm_infrastructureVm_object_storageBackup_primary_a>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam database<<ProductionRegion_drVm_dr_postgresqlPg_standby_b>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_drVm_dr_redisRedis_dr_b>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam queue<<ProductionRegion_drVm_dr_kafkaKafka_events_b>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam database<<ProductionRegion_backup_geographyVm_backup_site_bBackup_geo_b>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam database<<ProductionRegion_backup_geographyVm_backup_site_cBackup_geo_c>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+rectangle "Production" <<Production>> as Production {
+  skinparam RectangleBorderColor<<Production>> #2b85e7
+  skinparam RectangleFontColor<<Production>> #2b85e7
+  skinparam RectangleBorderStyle<<Production>> dashed
+
+  rectangle "Edge: WAF, CDN, DDoS (NFR-005)" <<ProductionEdge_security>> as ProductionEdge_security {
+    skinparam RectangleBorderColor<<ProductionEdge_security>> #23a2d9
+    skinparam RectangleFontColor<<ProductionEdge_security>> #23a2d9
+    skinparam RectangleBorderStyle<<ProductionEdge_security>> dashed
+
+    rectangle "WAF / CDN / DDoS mitigation (managed)\n<size:10>[Managed edge]</size>\n\nCloudFront+WAF, Cloudflare, Akamai и т.п.; rate limit и geo-блокировка на периметре" <<ProductionEdge_securityVm_edge_waf_cdn>> as ProductionEdge_securityVm_edge_waf_cdn
+  }
+  rectangle "Регион A (основной): вычисления и первичные данные" <<ProductionRegion_primary>> as ProductionRegion_primary {
+    skinparam RectangleBorderColor<<ProductionRegion_primary>> #23a2d9
+    skinparam RectangleFontColor<<ProductionRegion_primary>> #23a2d9
+    skinparam RectangleBorderStyle<<ProductionRegion_primary>> dashed
+
+    rectangle "Kubernetes (регион A)" <<ProductionRegion_primaryK8s_workloads>> as ProductionRegion_primaryK8s_workloads {
+      skinparam RectangleBorderColor<<ProductionRegion_primaryK8s_workloads>> #23a2d9
+      skinparam RectangleFontColor<<ProductionRegion_primaryK8s_workloads>> #23a2d9
+      skinparam RectangleBorderStyle<<ProductionRegion_primaryK8s_workloads>> dashed
+
+      rectangle "Кластер Kubernetes (prod, регион A)" <<ProductionRegion_primaryK8s_workloadsK8s_prod>> as ProductionRegion_primaryK8s_workloadsK8s_prod {
+        skinparam RectangleBorderColor<<ProductionRegion_primaryK8s_workloadsK8s_prod>> #3b82f6
+        skinparam RectangleFontColor<<ProductionRegion_primaryK8s_workloadsK8s_prod>> #3b82f6
+        skinparam RectangleBorderStyle<<ProductionRegion_primaryK8s_workloadsK8s_prod>> dashed
+
+        rectangle "ns: backend" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_backend>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_backend {
+          skinparam RectangleBorderColor<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_backend>> #0284c7
+          skinparam RectangleFontColor<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_backend>> #0284c7
+          skinparam RectangleBorderStyle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_backend>> dashed
+
+          rectangle "Audit Service\n<size:10>[[Spring Boot]]</size>\n\nАудит операций и безопасности: audit_logs, security_events (3.02)" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendAuditService>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendAuditService
+          rectangle "User Service\n<size:10>[[Spring Boot]]</size>\n\nПрофили, сессии, роли (RBAC), публикация событий назначения/снятия ролей в аудит (3.01, 3.02)" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendUserService>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendUserService
+          rectangle "Request Processing Service\n<size:10>[[Spring Boot]]</size>\n\nОбработка запросов (PROCESS_DATA, REPORT, EXPORT, RESOURCES)" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendRequestProcessingService>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendRequestProcessingService
+          rectangle "Payment Service\n<size:10>[[Spring Boot]]</size>\n\nПлатежи, интеграция с провайдером, Outbox" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendPaymentService>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendPaymentService
+          rectangle "Notification Service\n<size:10>[[Spring Boot]]</size>\n\nУведомления (Email, SMS, Push), потребитель событий" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendNotificationService>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendNotificationService
+        }
+        rectangle "ns: observability" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observability>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_observability {
+          skinparam RectangleBorderColor<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observability>> #0284c7
+          skinparam RectangleFontColor<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observability>> #0284c7
+          skinparam RectangleBorderStyle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observability>> dashed
+
+          rectangle "Сбор логов\n<size:10>[[Fluent Bit]]</size>\n\nАгенты на узлах: сбор и пересылка логов с сервисов" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector
+          rectangle "Сбор метрик\n<size:10>[[Prometheus]]</size>\n\nPull-скрейпинг Prometheus с сервисов и экспортёров (RED/USE, NFR-009)" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector
+          rectangle "Обработка логов\n<size:10>[[Vector]]</size>\n\nПарсинг, обогащение, маршрутизация, маскирование PII" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogProcessor>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogProcessor
+          rectangle "Представление логов, дашборды и анализ\n<size:10>[[Grafana]]</size>\n\nПоиск логов, метрики (PromQL), при необходимости — дашборды рядом с трассами (2.09)" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogUi>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogUi
+          rectangle "Алертинг\n<size:10>[[Alertmanager / Grafana Alerting]]</size>\n\nПравила алертов, группировка, маршрутизация в PagerDuty, Slack, Email" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityAlerting>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityAlerting
+          rectangle "OpenTelemetry Collector\n<size:10>[[OpenTelemetry Collector]]</size>\n\nПриём OTLP (метрики, трейсы) от приложений; экспорт в хранилище метрик и в Jaeger/Zipkin" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityOtelCollector>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityOtelCollector
+          rectangle "APM\n<size:10>[[New Relic / Datadog]]</size>\n\nApplication Performance Monitoring: New Relic, Datadog или согласованный аналог (NFR-009)" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityApmPlatform>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityApmPlatform
+        }
+        rectangle "ns: ingress-static" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_ingress>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_ingress {
+          skinparam RectangleBorderColor<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_ingress>> #0284c7
+          skinparam RectangleFontColor<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_ingress>> #0284c7
+          skinparam RectangleBorderStyle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_ingress>> dashed
+
+          rectangle "front\n<size:10>[[React]]</size>\n\nВеб-интерфейс для взаимодействия с системой" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_ingressFront>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_ingressFront
+        }
+        rectangle "ns: api-gateway" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_gateway>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_gateway {
+          skinparam RectangleBorderColor<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_gateway>> #0284c7
+          skinparam RectangleFontColor<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_gateway>> #0284c7
+          skinparam RectangleBorderStyle<<ProductionRegion_primaryK8s_workloadsK8s_prodNs_gateway>> dashed
+
+          rectangle "api-gateway\n<size:10>[[Spring Cloud Gateway]]</size>\n\nМаршрутизация API, аутентификация (JWT), авторизация (RBAC), rate limiting, публикация событий 401/403 и логина (3.02)" <<ProductionRegion_primaryK8s_workloadsK8s_prodNs_gatewayApiGateway>> as ProductionRegion_primaryK8s_workloadsK8s_prodNs_gatewayApiGateway
+        }
+      }
+    }
+    rectangle "Слой VM (вне Kubernetes)" <<ProductionRegion_primaryVm_infrastructure>> as ProductionRegion_primaryVm_infrastructure {
+      skinparam RectangleBorderColor<<ProductionRegion_primaryVm_infrastructure>> #23a2d9
+      skinparam RectangleFontColor<<ProductionRegion_primaryVm_infrastructure>> #23a2d9
+      skinparam RectangleBorderStyle<<ProductionRegion_primaryVm_infrastructure>> dashed
+
+      rectangle "VM: Kafka (Event Bus + шина логов)" <<ProductionRegion_primaryVm_infrastructureVm_kafka>> as ProductionRegion_primaryVm_infrastructureVm_kafka {
+        skinparam RectangleBorderColor<<ProductionRegion_primaryVm_infrastructureVm_kafka>> #64748b
+        skinparam RectangleFontColor<<ProductionRegion_primaryVm_infrastructureVm_kafka>> #64748b
+        skinparam RectangleBorderStyle<<ProductionRegion_primaryVm_infrastructureVm_kafka>> dashed
+
+        queue "Kafka: топики логов (регион A)\n<size:10>[[Apache Kafka]]</size>\n\nБуфер и поток логов, сглаживание пиков" <<ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_logs_a>> as ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_logs_a
+        queue "Kafka: Event Bus (регион A)\n<size:10>[[Apache Kafka]]</size>\n\nАсинхронные события между сервисами (в т.ч. audit.events, security.events для аудита — 3.02)" <<ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_events_a>> as ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_events_a
+      }
+      rectangle "VM: хранилища наблюдаемости" <<ProductionRegion_primaryVm_infrastructureVm_observability_storage>> as ProductionRegion_primaryVm_infrastructureVm_observability_storage {
+        skinparam RectangleBorderColor<<ProductionRegion_primaryVm_infrastructureVm_observability_storage>> #64748b
+        skinparam RectangleFontColor<<ProductionRegion_primaryVm_infrastructureVm_observability_storage>> #64748b
+        skinparam RectangleBorderStyle<<ProductionRegion_primaryVm_infrastructureVm_observability_storage>> dashed
+
+        rectangle "Хранилище логов\n<size:10>[[Elasticsearch]]</size>\n\nИндексация и хранение (hot/warm/cold)" <<ProductionRegion_primaryVm_infrastructureVm_observability_storageLogStorage>> as ProductionRegion_primaryVm_infrastructureVm_observability_storageLogStorage
+        rectangle "Хранилище метрик\n<size:10>[Prometheus TSDB / VictoriaMetrics]</size>\n\nВременные ряды, retention (real-time / 7 дней / 90 дней)" <<ProductionRegion_primaryVm_infrastructureVm_observability_storageMetricsStorage>> as ProductionRegion_primaryVm_infrastructureVm_observability_storageMetricsStorage
+        rectangle "Распределённая трассировка\n<size:10>[[Jaeger / Zipkin]]</size>\n\nХранение и UI трейсов: Jaeger или Zipkin (NFR-009)" <<ProductionRegion_primaryVm_infrastructureVm_observability_storageTraceBackend>> as ProductionRegion_primaryVm_infrastructureVm_observability_storageTraceBackend
+      }
+      rectangle "VM: периметр (Nginx / HAProxy)" <<ProductionRegion_primaryVm_infrastructureVm_perimeter>> as ProductionRegion_primaryVm_infrastructureVm_perimeter {
+        skinparam RectangleBorderColor<<ProductionRegion_primaryVm_infrastructureVm_perimeter>> #64748b
+        skinparam RectangleFontColor<<ProductionRegion_primaryVm_infrastructureVm_perimeter>> #64748b
+        skinparam RectangleBorderStyle<<ProductionRegion_primaryVm_infrastructureVm_perimeter>> dashed
+
+        rectangle "load-balancer\n<size:10>[[Nginx]]</size>\n\nЕдиная точка входа: распределение трафика, TLS termination" <<ProductionRegion_primaryVm_infrastructureVm_perimeterLoadBalancer>> as ProductionRegion_primaryVm_infrastructureVm_perimeterLoadBalancer
+      }
+      rectangle "VM: Keycloak (IAM)" <<ProductionRegion_primaryVm_infrastructureVm_iam>> as ProductionRegion_primaryVm_infrastructureVm_iam {
+        skinparam RectangleBorderColor<<ProductionRegion_primaryVm_infrastructureVm_iam>> #64748b
+        skinparam RectangleFontColor<<ProductionRegion_primaryVm_infrastructureVm_iam>> #64748b
+        skinparam RectangleBorderStyle<<ProductionRegion_primaryVm_infrastructureVm_iam>> dashed
+
+        rectangle "iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management (Keycloak)" <<ProductionRegion_primaryVm_infrastructureVm_iamIam>> as ProductionRegion_primaryVm_infrastructureVm_iamIam
+      }
+      rectangle "VM: Redis Cluster" <<ProductionRegion_primaryVm_infrastructureVm_redis>> as ProductionRegion_primaryVm_infrastructureVm_redis {
+        skinparam RectangleBorderColor<<ProductionRegion_primaryVm_infrastructureVm_redis>> #64748b
+        skinparam RectangleFontColor<<ProductionRegion_primaryVm_infrastructureVm_redis>> #64748b
+        skinparam RectangleBorderStyle<<ProductionRegion_primaryVm_infrastructureVm_redis>> dashed
+
+        rectangle "Redis Cluster (регион A)\n<size:10>[[Redis Cluster]]</size>\n\nРаспределённый кэш Cache-Aside (профили, сессии, результаты запросов, rate limit)" <<ProductionRegion_primaryVm_infrastructureVm_redisRedis_cluster_a>> as ProductionRegion_primaryVm_infrastructureVm_redisRedis_cluster_a
+      }
+      rectangle "VM: PostgreSQL (регион A)" <<ProductionRegion_primaryVm_infrastructureVm_postgresql>> as ProductionRegion_primaryVm_infrastructureVm_postgresql {
+        skinparam RectangleBorderColor<<ProductionRegion_primaryVm_infrastructureVm_postgresql>> #64748b
+        skinparam RectangleFontColor<<ProductionRegion_primaryVm_infrastructureVm_postgresql>> #64748b
+        skinparam RectangleBorderStyle<<ProductionRegion_primaryVm_infrastructureVm_postgresql>> dashed
+
+        database "PostgreSQL primary (регион A)\n<size:10>[[PostgreSQL]]</size>\n\nУзел primary: 32 vCPU, 256 GiB RAM, ~5 TiB быстрый диск (данные доменов + WAL hot)." <<ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_master_a>> as ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_master_a
+        database "Read replicas (внутри региона A, синхронные)\n<size:10>[[PostgreSQL]]</size>\n\n2× replica (сумма): 48 vCPU, 384 GiB RAM, ~9 TiB — зеркало данных и чтение." <<ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_replicas_a>> as ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_replicas_a
+      }
+      rectangle "VM: HashiCorp Vault" <<ProductionRegion_primaryVm_infrastructureVm_vault>> as ProductionRegion_primaryVm_infrastructureVm_vault {
+        skinparam RectangleBorderColor<<ProductionRegion_primaryVm_infrastructureVm_vault>> #64748b
+        skinparam RectangleFontColor<<ProductionRegion_primaryVm_infrastructureVm_vault>> #64748b
+        skinparam RectangleBorderStyle<<ProductionRegion_primaryVm_infrastructureVm_vault>> dashed
+
+        rectangle "Vault (секреты)\n<size:10>[[HashiCorp Vault]]</size>\n\nУправление секретами: БД, Redis, Kafka, IAM client_secret, платёжные API-ключи (3.04)" <<ProductionRegion_primaryVm_infrastructureVm_vaultSecretsVault>> as ProductionRegion_primaryVm_infrastructureVm_vaultSecretsVault
+      }
+      rectangle "VM: объектное хранилище бэкапов (регион A)" <<ProductionRegion_primaryVm_infrastructureVm_object_storage>> as ProductionRegion_primaryVm_infrastructureVm_object_storage {
+        skinparam RectangleBorderColor<<ProductionRegion_primaryVm_infrastructureVm_object_storage>> #64748b
+        skinparam RectangleFontColor<<ProductionRegion_primaryVm_infrastructureVm_object_storage>> #64748b
+        skinparam RectangleBorderStyle<<ProductionRegion_primaryVm_infrastructureVm_object_storage>> dashed
+
+        database "Объектное хранилище бэкапов (регион A)\n<size:10>[[MinIO]]</size>\n\nОтдельное хранилище: полные снимки и WAL-архив (PITR); другой регион/аккаунт. Retention ≥30 дней (2.13)." <<ProductionRegion_primaryVm_infrastructureVm_object_storageBackup_primary_a>> as ProductionRegion_primaryVm_infrastructureVm_object_storageBackup_primary_a
+      }
+    }
+  }
+  rectangle "Регион B (DR / второй географический контур)" <<ProductionRegion_dr>> as ProductionRegion_dr {
+    skinparam RectangleBorderColor<<ProductionRegion_dr>> #23a2d9
+    skinparam RectangleFontColor<<ProductionRegion_dr>> #23a2d9
+    skinparam RectangleBorderStyle<<ProductionRegion_dr>> dashed
+
+    rectangle "Kubernetes (регион B, сокращённый контур)" <<ProductionRegion_drK8s_dr>> as ProductionRegion_drK8s_dr {
+      skinparam RectangleBorderColor<<ProductionRegion_drK8s_dr>> #3b82f6
+      skinparam RectangleFontColor<<ProductionRegion_drK8s_dr>> #3b82f6
+      skinparam RectangleBorderStyle<<ProductionRegion_drK8s_dr>> dashed
+
+      rectangle "ns: dr-standby" <<ProductionRegion_drK8s_drNs_dr_standby>> as ProductionRegion_drK8s_drNs_dr_standby {
+        skinparam RectangleBorderColor<<ProductionRegion_drK8s_drNs_dr_standby>> #0284c7
+        skinparam RectangleFontColor<<ProductionRegion_drK8s_drNs_dr_standby>> #0284c7
+        skinparam RectangleBorderStyle<<ProductionRegion_drK8s_drNs_dr_standby>> dashed
+
+        rectangle "api-gateway\n<size:10>[[Spring Cloud Gateway]]</size>\n\nМаршрутизация API, аутентификация (JWT), авторизация (RBAC), rate limiting, публикация событий 401/403 и логина (3.02)" <<ProductionRegion_drK8s_drNs_dr_standbyApiGateway>> as ProductionRegion_drK8s_drNs_dr_standbyApiGateway
+        rectangle "User Service\n<size:10>[[Spring Boot]]</size>\n\nПрофили, сессии, роли (RBAC), публикация событий назначения/снятия ролей в аудит (3.01, 3.02)" <<ProductionRegion_drK8s_drNs_dr_standbyUserService>> as ProductionRegion_drK8s_drNs_dr_standbyUserService
+        rectangle "Request Processing Service\n<size:10>[[Spring Boot]]</size>\n\nОбработка запросов (PROCESS_DATA, REPORT, EXPORT, RESOURCES)" <<ProductionRegion_drK8s_drNs_dr_standbyRequestProcessingService>> as ProductionRegion_drK8s_drNs_dr_standbyRequestProcessingService
+        rectangle "Payment Service\n<size:10>[[Spring Boot]]</size>\n\nПлатежи, интеграция с провайдером, Outbox" <<ProductionRegion_drK8s_drNs_dr_standbyPaymentService>> as ProductionRegion_drK8s_drNs_dr_standbyPaymentService
+      }
+    }
+    rectangle "VM: Redis (регион B, реплика/кластер)" <<ProductionRegion_drVm_dr_redis>> as ProductionRegion_drVm_dr_redis {
+      skinparam RectangleBorderColor<<ProductionRegion_drVm_dr_redis>> #64748b
+      skinparam RectangleFontColor<<ProductionRegion_drVm_dr_redis>> #64748b
+      skinparam RectangleBorderStyle<<ProductionRegion_drVm_dr_redis>> dashed
+
+      rectangle "Redis (регион B, cross-region replica)\n<size:10>[[Redis Cluster]]</size>\n\nРаспределённый кэш Cache-Aside (профили, сессии, результаты запросов, rate limit)" <<ProductionRegion_drVm_dr_redisRedis_dr_b>> as ProductionRegion_drVm_dr_redisRedis_dr_b
+    }
+    rectangle "VM: PostgreSQL (standby / replicas в регионе B)" <<ProductionRegion_drVm_dr_postgresql>> as ProductionRegion_drVm_dr_postgresql {
+      skinparam RectangleBorderColor<<ProductionRegion_drVm_dr_postgresql>> #64748b
+      skinparam RectangleFontColor<<ProductionRegion_drVm_dr_postgresql>> #64748b
+      skinparam RectangleBorderStyle<<ProductionRegion_drVm_dr_postgresql>> dashed
+
+      database "PostgreSQL DR standby / read replica (регион B)\n<size:10>[[PostgreSQL]]</size>\n\nЧтение только с реплик (streaming replication). Масштабирование чтения; ~28K RPS при cache hit 80% (2.07)." <<ProductionRegion_drVm_dr_postgresqlPg_standby_b>> as ProductionRegion_drVm_dr_postgresqlPg_standby_b
+    }
+    rectangle "VM: Kafka (регион B)" <<ProductionRegion_drVm_dr_kafka>> as ProductionRegion_drVm_dr_kafka {
+      skinparam RectangleBorderColor<<ProductionRegion_drVm_dr_kafka>> #64748b
+      skinparam RectangleFontColor<<ProductionRegion_drVm_dr_kafka>> #64748b
+      skinparam RectangleBorderStyle<<ProductionRegion_drVm_dr_kafka>> dashed
+
+      queue "Kafka: Event Bus (регион B, зеркало)\n<size:10>[[Apache Kafka]]</size>\n\nАсинхронные события между сервисами (в т.ч. audit.events, security.events для аудита — 3.02)" <<ProductionRegion_drVm_dr_kafkaKafka_events_b>> as ProductionRegion_drVm_dr_kafkaKafka_events_b
+    }
+  }
+  rectangle "Регион C + копии: гео-бэкапы (≥2 региона отдельно от primary)" <<ProductionRegion_backup_geography>> as ProductionRegion_backup_geography {
+    skinparam RectangleBorderColor<<ProductionRegion_backup_geography>> #23a2d9
+    skinparam RectangleFontColor<<ProductionRegion_backup_geography>> #23a2d9
+    skinparam RectangleBorderStyle<<ProductionRegion_backup_geography>> dashed
+
+    rectangle "VM: хранилище бэкапов (гео-копия B)" <<ProductionRegion_backup_geographyVm_backup_site_b>> as ProductionRegion_backup_geographyVm_backup_site_b {
+      skinparam RectangleBorderColor<<ProductionRegion_backup_geographyVm_backup_site_b>> #64748b
+      skinparam RectangleFontColor<<ProductionRegion_backup_geographyVm_backup_site_b>> #64748b
+      skinparam RectangleBorderStyle<<ProductionRegion_backup_geographyVm_backup_site_b>> dashed
+
+      database "Гео-копия бэкапов (площадка B)\n<size:10>[[MinIO]]</size>\n\nОтдельное хранилище: полные снимки и WAL-архив (PITR); другой регион/аккаунт. Retention ≥30 дней (2.13)." <<ProductionRegion_backup_geographyVm_backup_site_bBackup_geo_b>> as ProductionRegion_backup_geographyVm_backup_site_bBackup_geo_b
+    }
+    rectangle "VM: хранилище бэкапов (гео-копия C)" <<ProductionRegion_backup_geographyVm_backup_site_c>> as ProductionRegion_backup_geographyVm_backup_site_c {
+      skinparam RectangleBorderColor<<ProductionRegion_backup_geographyVm_backup_site_c>> #64748b
+      skinparam RectangleFontColor<<ProductionRegion_backup_geographyVm_backup_site_c>> #64748b
+      skinparam RectangleBorderStyle<<ProductionRegion_backup_geographyVm_backup_site_c>> dashed
+
+      database "Гео-копия бэкапов (площадка C)\n<size:10>[[MinIO]]</size>\n\nОтдельное хранилище: полные снимки и WAL-архив (PITR); другой регион/аккаунт. Retention ≥30 дней (2.13)." <<ProductionRegion_backup_geographyVm_backup_site_cBackup_geo_c>> as ProductionRegion_backup_geographyVm_backup_site_cBackup_geo_c
+    }
+  }
+}
+
+ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_master_a .[#15803d,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_object_storageBackup_primary_a : <color:#15803d>Репликация бэкапов: полный снимок, \n<color:#15803d>WAL-архив (PITR)\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryVm_infrastructureVm_redisRedis_cluster_a .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_object_storageBackup_primary_a : <color:#6366f1>RDB/AOF снимки (опционально)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogUi .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityAlerting : <color:#6366f1>Правила и оценка (Grafana Alerting)\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_ingressFront .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_gatewayApiGateway : <color:#6366f1>Вызовы API с фронтенда\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_ingressFront : <color:#6366f1>Сбор логов веб-сервера и SPA\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_ingressFront : <color:#6366f1>Сбор метрик веб-сервера\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_gatewayApiGateway .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendUserService : <color:#6366f1>Маршрутизация /api/users, профиль, \n<color:#6366f1>сессии\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_gatewayApiGateway .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendRequestProcessingService : <color:#6366f1>Маршрутизация /api/requests\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_gatewayApiGateway .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendPaymentService : <color:#6366f1>Маршрутизация /api/payments\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_gatewayApiGateway .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendNotificationService : <color:#6366f1>Маршрутизация /api/notifications, \n<color:#6366f1>настройки\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_gatewayApiGateway .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityOtelCollector : <color:#6366f1>OTLP: метрики и трейсы (W3C Trace \n<color:#6366f1>Context)\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_gatewayApiGateway .[#15803d,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityApmPlatform : <color:#15803d>APM agent / SDK\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_gatewayApiGateway : <color:#6366f1>Сбор логов шлюза (запросы, ошибки)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_gatewayApiGateway : <color:#6366f1>Скрейпинг метрик шлюза\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendUserService .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityOtelCollector : <color:#6366f1>OTLP: метрики и трейсы\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendUserService .[#15803d,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityApmPlatform : <color:#15803d>APM agent / SDK\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendUserService : <color:#6366f1>Сбор логов приложения\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendUserService : <color:#6366f1>Скрейпинг метрик\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendRequestProcessingService .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityOtelCollector : <color:#6366f1>OTLP: метрики и трейсы\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendRequestProcessingService .[#15803d,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityApmPlatform : <color:#15803d>APM agent / SDK\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendRequestProcessingService : <color:#6366f1>Сбор логов приложения\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendRequestProcessingService : <color:#6366f1>Скрейпинг метрик\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendPaymentService .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityOtelCollector : <color:#6366f1>OTLP: метрики и трейсы\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendPaymentService .[#15803d,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityApmPlatform : <color:#15803d>APM agent / SDK\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendPaymentService : <color:#6366f1>Сбор логов приложения\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendPaymentService : <color:#6366f1>Скрейпинг метрик\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendNotificationService .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityOtelCollector : <color:#6366f1>OTLP: метрики и трейсы\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendNotificationService .[#15803d,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityApmPlatform : <color:#15803d>APM agent / SDK\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendNotificationService : <color:#6366f1>Сбор логов приложения\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendNotificationService : <color:#6366f1>Скрейпинг метрик\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendAuditService .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityOtelCollector : <color:#6366f1>OTLP: метрики и трейсы\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendAuditService .[#15803d,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityApmPlatform : <color:#15803d>APM agent / SDK\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendAuditService : <color:#6366f1>Сбор логов приложения\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendAuditService : <color:#6366f1>Скрейпинг метрик\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryVm_infrastructureVm_perimeterLoadBalancer .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_ingressFront : <color:#6366f1>Раздача статики и проксирование API\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_perimeterLoadBalancer : <color:#6366f1>Сбор access/error логов Nginx\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_perimeterLoadBalancer : <color:#6366f1>Скрейпинг метрик Nginx\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_gatewayApiGateway .[#15803d,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_iamIam : <color:#15803d>Валидация JWT, проверка прав, JWKS\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendUserService .[#15803d,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_iamIam : <color:#15803d>Синхронизация пользователей, ролей и \n<color:#15803d>сессий с Keycloak\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_iamIam : <color:#6366f1>Сбор логов Keycloak/IAM\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_iamIam : <color:#6366f1>Сбор метрик Keycloak/IAM\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendUserService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_master_a : <color:#6366f1>Запись: users, sessions, roles\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendRequestProcessingService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_master_a : <color:#6366f1>Запись: запросы, история, вложения\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendPaymentService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_master_a : <color:#6366f1>Запись: транзакции, outbox\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendNotificationService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_master_a : <color:#6366f1>Запись: статусы доставки\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendAuditService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_master_a : <color:#6366f1>Запись: audit_logs, security_events\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_master_a : <color:#6366f1>Сбор логов PostgreSQL (master)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_master_a : <color:#6366f1>Сбор метрик PostgreSQL (master)\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendUserService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_replicas_a : <color:#6366f1>Чтение: users, sessions, roles (с \n<color:#6366f1>реплик)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendRequestProcessingService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_replicas_a : <color:#6366f1>Чтение: запросы, история (с реплик)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendPaymentService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_replicas_a : <color:#6366f1>Чтение: транзакции, история (с реплик)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendNotificationService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_replicas_a : <color:#6366f1>Чтение: уведомления, шаблоны (с реплик)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendAuditService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_replicas_a : <color:#6366f1>Чтение: аудит (с реплик, расследования)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_replicas_a : <color:#6366f1>Сбор логов PostgreSQL (replicas)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_replicas_a : <color:#6366f1>Сбор метрик PostgreSQL (read replicas)\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendUserService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_redisRedis_cluster_a : <color:#6366f1>Профили, сессии (Cache-Aside)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendRequestProcessingService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_redisRedis_cluster_a : <color:#6366f1>Результаты запросов (Cache-Aside)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_redisRedis_cluster_a : <color:#6366f1>Сбор логов Redis\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_redisRedis_cluster_a : <color:#6366f1>Сбор метрик Redis\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_gatewayApiGateway .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_events_a : <color:#6366f1>Публикация событий 401/403, логин \n<color:#6366f1>успех/неудача, 429 (3.02)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendUserService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_events_a : <color:#6366f1>Публикация событий назначения/снятия \n<color:#6366f1>ролей (ROLE_GRANTED, ROLE_REVOKED)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendRequestProcessingService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_events_a : <color:#6366f1>Публикация событий (уведомления, аудит)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendPaymentService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_events_a : <color:#6366f1>События платежей (уведомления, аудит)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendNotificationService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_events_a : <color:#6366f1>Потребление событий уведомлений\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendAuditService .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_events_a : <color:#6366f1>Потребление событий аудита и \n<color:#6366f1>безопасности (audit.events, \n<color:#6366f1>security.events)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_events_a : <color:#6366f1>Сбор логов Kafka\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_events_a : <color:#6366f1>Сбор метрик Kafka\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_logs_a .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogProcessor : <color:#6366f1>Чтение из топиков\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_logs_a : <color:#6366f1>Пересылка логов в шину\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_gatewayApiGateway .[#15803d,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_vaultSecretsVault : <color:#15803d>Получение секретов (IAM client_secret, \n<color:#15803d>rate-limit config)\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendUserService .[#15803d,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_vaultSecretsVault : <color:#15803d>Получение секретов (БД, Redis, IAM \n<color:#15803d>client)\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendRequestProcessingService .[#15803d,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_vaultSecretsVault : <color:#15803d>Получение секретов (БД, Redis, Kafka)\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendPaymentService .[#15803d,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_vaultSecretsVault : <color:#15803d>Получение секретов (БД, платёжный API \n<color:#15803d>key, webhook secret)\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendNotificationService .[#15803d,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_vaultSecretsVault : <color:#15803d>Получение секретов (БД, Kafka, провайдер \n<color:#15803d>уведомлений)\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_backendAuditService .[#15803d,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_vaultSecretsVault : <color:#15803d>Получение секретов (БД, Kafka)\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryVm_infrastructureVm_observability_storageLogStorage .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogUi : <color:#6366f1>Запросы поиска и выборок\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogProcessor .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_observability_storageLogStorage : <color:#6366f1>Индексация и запись в хранилище\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryVm_infrastructureVm_observability_storageMetricsStorage .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogUi : <color:#6366f1>Запросы к временным рядам (PromQL)\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryVm_infrastructureVm_observability_storageMetricsStorage .[#6366f1,thickness=2].> ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityAlerting : <color:#6366f1>Запросы для правил алертов (PromQL)\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityMetricsCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_observability_storageMetricsStorage : <color:#6366f1>Скрейпинг и запись метрик\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityOtelCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_observability_storageMetricsStorage : <color:#6366f1>Remote write метрик (OTLP → TSDB)\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityLogUi .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_observability_storageTraceBackend : <color:#6366f1>Запросы трасс (datasource, Explore)\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_primaryK8s_workloadsK8s_prodNs_observabilityOtelCollector .[#6366f1,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_observability_storageTraceBackend : <color:#6366f1>Экспорт трейсов (OTLP/Jaeger gRPC)\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_drK8s_drNs_dr_standbyApiGateway .[#6366f1,thickness=2].> ProductionRegion_drK8s_drNs_dr_standbyUserService : <color:#6366f1>Маршрутизация /api/users, профиль, \n<color:#6366f1>сессии\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_drK8s_drNs_dr_standbyApiGateway .[#6366f1,thickness=2].> ProductionRegion_drK8s_drNs_dr_standbyRequestProcessingService : <color:#6366f1>Маршрутизация /api/requests\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_drK8s_drNs_dr_standbyApiGateway .[#6366f1,thickness=2].> ProductionRegion_drK8s_drNs_dr_standbyPaymentService : <color:#6366f1>Маршрутизация /api/payments\n<size:8>[<color:#6366f1>HTTP]</size>
+ProductionRegion_drK8s_drNs_dr_standbyUserService .[#6366f1,thickness=2].> ProductionRegion_drVm_dr_postgresqlPg_standby_b : <color:#6366f1>Чтение: users, sessions, roles (с \n<color:#6366f1>реплик)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_drK8s_drNs_dr_standbyRequestProcessingService .[#6366f1,thickness=2].> ProductionRegion_drVm_dr_postgresqlPg_standby_b : <color:#6366f1>Чтение: запросы, история (с реплик)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_drK8s_drNs_dr_standbyPaymentService .[#6366f1,thickness=2].> ProductionRegion_drVm_dr_postgresqlPg_standby_b : <color:#6366f1>Чтение: транзакции, история (с реплик)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_drK8s_drNs_dr_standbyApiGateway .[#6366f1,thickness=2].> ProductionRegion_drVm_dr_kafkaKafka_events_b : <color:#6366f1>Публикация событий 401/403, логин \n<color:#6366f1>успех/неудача, 429 (3.02)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_drK8s_drNs_dr_standbyUserService .[#6366f1,thickness=2].> ProductionRegion_drVm_dr_kafkaKafka_events_b : <color:#6366f1>Публикация событий назначения/снятия \n<color:#6366f1>ролей (ROLE_GRANTED, ROLE_REVOKED)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_drK8s_drNs_dr_standbyRequestProcessingService .[#6366f1,thickness=2].> ProductionRegion_drVm_dr_kafkaKafka_events_b : <color:#6366f1>Публикация событий (уведомления, аудит)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_drK8s_drNs_dr_standbyPaymentService .[#6366f1,thickness=2].> ProductionRegion_drVm_dr_kafkaKafka_events_b : <color:#6366f1>События платежей (уведомления, аудит)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_drK8s_drNs_dr_standbyUserService .[#6366f1,thickness=2].> ProductionRegion_drVm_dr_redisRedis_dr_b : <color:#6366f1>Профили, сессии (Cache-Aside)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_drK8s_drNs_dr_standbyRequestProcessingService .[#6366f1,thickness=2].> ProductionRegion_drVm_dr_redisRedis_dr_b : <color:#6366f1>Результаты запросов (Cache-Aside)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryVm_infrastructureVm_postgresqlPg_replicas_a .[#6366f1,thickness=2].> ProductionRegion_drVm_dr_postgresqlPg_standby_b : <color:#6366f1>PostgreSQL replication A to B\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryVm_infrastructureVm_redisRedis_cluster_a .[#6366f1,thickness=2].> ProductionRegion_drVm_dr_redisRedis_dr_b : <color:#6366f1>Redis cross-region replica\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryVm_infrastructureVm_kafkaKafka_events_a .[#6366f1,thickness=2].> ProductionRegion_drVm_dr_kafkaKafka_events_b : <color:#6366f1>Kafka MM2 / cluster linking\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primaryVm_infrastructureVm_object_storageBackup_primary_a .[#15803d,thickness=2].> ProductionRegion_backup_geographyVm_backup_site_bBackup_geo_b : <color:#15803d>Backup geo-replication\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_primaryVm_infrastructureVm_object_storageBackup_primary_a .[#15803d,thickness=2].> ProductionRegion_backup_geographyVm_backup_site_cBackup_geo_c : <color:#15803d>Backup geo-replication\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_drVm_dr_redisRedis_dr_b .[#6366f1,thickness=2].> ProductionRegion_backup_geographyVm_backup_site_bBackup_geo_b : <color:#6366f1>RDB/AOF снимки (опционально)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_drVm_dr_redisRedis_dr_b .[#6366f1,thickness=2].> ProductionRegion_backup_geographyVm_backup_site_cBackup_geo_c : <color:#6366f1>RDB/AOF снимки (опционально)\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionEdge_securityVm_edge_waf_cdn .[#15803d,thickness=2].> ProductionRegion_primaryVm_infrastructureVm_perimeter : <color:#15803d>HTTPS
+@enduml

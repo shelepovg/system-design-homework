@@ -28,22 +28,12 @@ skinparam queue<<SystemMonitoringLogBus>>{
   FontColor #ffffff
   BorderColor #1892c5
 }
-skinparam rectangle<<SystemMonitoringMetricsStorage>>{
-  BackgroundColor #23a2d9
-  FontColor #ffffff
-  BorderColor #1892c5
-}
 skinparam rectangle<<SystemLoadBalancer>>{
   BackgroundColor #23a2d9
   FontColor #ffffff
   BorderColor #1892c5
 }
 skinparam rectangle<<SystemMonitoringLogProcessor>>{
-  BackgroundColor #23a2d9
-  FontColor #ffffff
-  BorderColor #1892c5
-}
-skinparam rectangle<<SystemMonitoringAlerting>>{
   BackgroundColor #23a2d9
   FontColor #ffffff
   BorderColor #1892c5
@@ -63,15 +53,20 @@ skinparam rectangle<<SystemApiGateway>>{
   FontColor #ffffff
   BorderColor #1892c5
 }
-skinparam rectangle<<SystemMonitoringLogUi>>{
-  BackgroundColor #23a2d9
-  FontColor #ffffff
-  BorderColor #1892c5
-}
 skinparam rectangle<<SystemBackend>>{
   BackgroundColor #2b85e7
   FontColor #f1ffff
   BorderColor #1e73ce
+}
+skinparam rectangle<<SystemMonitoringOtelCollector>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemMonitoringApmPlatform>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
 }
 skinparam rectangle<<SystemIam>>{
   BackgroundColor #2b85e7
@@ -93,6 +88,26 @@ skinparam rectangle<<SystemSecretsVault>>{
   FontColor #ffffff
   BorderColor #1892c5
 }
+skinparam rectangle<<SystemMonitoringMetricsStorage>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemMonitoringLogUi>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemMonitoringTraceBackend>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<SystemMonitoringAlerting>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
 rectangle "Система" <<System>> as System {
   skinparam RectangleBorderColor<<System>> #2b85e7
   skinparam RectangleFontColor<<System>> #2b85e7
@@ -104,13 +119,16 @@ rectangle "Система" <<System>> as System {
     skinparam RectangleBorderStyle<<SystemMonitoring>> dashed
 
     rectangle "Сбор логов\n<size:10>[[Fluent Bit]]</size>\n\nАгенты на узлах: сбор и пересылка логов с сервисов" <<SystemMonitoringLogCollector>> as SystemMonitoringLogCollector
-    rectangle "Сбор метрик\n<size:10>[[Prometheus / OpenTelemetry Collector]]</size>\n\nСкрейпинг и приём метрик с сервисов и инфраструктуры" <<SystemMonitoringMetricsCollector>> as SystemMonitoringMetricsCollector
+    rectangle "Сбор метрик\n<size:10>[[Prometheus]]</size>\n\nPull-скрейпинг Prometheus с сервисов и экспортёров (RED/USE, NFR-009)" <<SystemMonitoringMetricsCollector>> as SystemMonitoringMetricsCollector
     queue "Шина логов\n<size:10>[[Apache Kafka]]</size>\n\nБуфер и поток логов, сглаживание пиков" <<SystemMonitoringLogBus>> as SystemMonitoringLogBus
-    rectangle "Хранилище метрик\n<size:10>[Prometheus TSDB / VictoriaMetrics]</size>\n\nВременные ряды, retention (real-time / 7 дней / 90 дней)" <<SystemMonitoringMetricsStorage>> as SystemMonitoringMetricsStorage
     rectangle "Обработка логов\n<size:10>[[Vector]]</size>\n\nПарсинг, обогащение, маршрутизация, маскирование PII" <<SystemMonitoringLogProcessor>> as SystemMonitoringLogProcessor
-    rectangle "Алертинг\n<size:10>[[Grafana Alerting]]</size>\n\nПравила алертов, группировка, уведомления (PagerDuty, Slack, Email)" <<SystemMonitoringAlerting>> as SystemMonitoringAlerting
     rectangle "Хранилище логов\n<size:10>[[Elasticsearch]]</size>\n\nИндексация и хранение (hot/warm/cold)" <<SystemMonitoringLogStorage>> as SystemMonitoringLogStorage
-    rectangle "Представление логов, дашборды и анализ\n<size:10>[[Grafana]]</size>\n\nПоиск, фильтрация, просмотр логов для операторов и разработчиков" <<SystemMonitoringLogUi>> as SystemMonitoringLogUi
+    rectangle "OpenTelemetry Collector\n<size:10>[[OpenTelemetry Collector]]</size>\n\nПриём OTLP (метрики, трейсы) от приложений; экспорт в хранилище метрик и в Jaeger/Zipkin" <<SystemMonitoringOtelCollector>> as SystemMonitoringOtelCollector
+    rectangle "APM\n<size:10>[[New Relic / Datadog]]</size>\n\nApplication Performance Monitoring: New Relic, Datadog или согласованный аналог (NFR-009)" <<SystemMonitoringApmPlatform>> as SystemMonitoringApmPlatform
+    rectangle "Хранилище метрик\n<size:10>[Prometheus TSDB / VictoriaMetrics]</size>\n\nВременные ряды, retention (real-time / 7 дней / 90 дней)" <<SystemMonitoringMetricsStorage>> as SystemMonitoringMetricsStorage
+    rectangle "Представление логов, дашборды и анализ\n<size:10>[[Grafana]]</size>\n\nПоиск логов, метрики (PromQL), при необходимости — дашборды рядом с трассами (2.09)" <<SystemMonitoringLogUi>> as SystemMonitoringLogUi
+    rectangle "Распределённая трассировка\n<size:10>[[Jaeger / Zipkin]]</size>\n\nХранение и UI трейсов: Jaeger или Zipkin (NFR-009)" <<SystemMonitoringTraceBackend>> as SystemMonitoringTraceBackend
+    rectangle "Алертинг\n<size:10>[[Alertmanager / Grafana Alerting]]</size>\n\nПравила алертов, группировка, маршрутизация в PagerDuty, Slack, Email" <<SystemMonitoringAlerting>> as SystemMonitoringAlerting
   }
   rectangle "load-balancer\n<size:10>[[Nginx]]</size>\n\nЕдиная точка входа: распределение трафика, TLS termination" <<SystemLoadBalancer>> as SystemLoadBalancer
   rectangle "front\n<size:10>[[React]]</size>\n\nВеб-интерфейс для взаимодействия с системой" <<SystemFront>> as SystemFront
@@ -126,9 +144,13 @@ SystemMonitoringLogCollector .[#6366f1,thickness=2].> SystemMonitoringLogBus : <
 SystemMonitoringLogBus .[#6366f1,thickness=2].> SystemMonitoringLogProcessor : <color:#6366f1>Чтение из топиков\n<size:8>[<color:#6366f1>TCP]</size>
 SystemMonitoringLogProcessor .[#6366f1,thickness=2].> SystemMonitoringLogStorage : <color:#6366f1>Индексация и запись в хранилище\n<size:8>[<color:#6366f1>HTTP]</size>
 SystemMonitoringLogStorage .[#6366f1,thickness=2].> SystemMonitoringLogUi : <color:#6366f1>Запросы поиска и выборок\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringLogUi .[#6366f1,thickness=2].> SystemMonitoringTraceBackend : <color:#6366f1>Запросы трасс (datasource, Explore)\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringLogUi .[#6366f1,thickness=2].> SystemMonitoringAlerting : <color:#6366f1>Правила и оценка (Grafana Alerting)\n<size:8>[<color:#6366f1>HTTP]</size>
 SystemMonitoringMetricsStorage .[#6366f1,thickness=2].> SystemMonitoringLogUi : <color:#6366f1>Запросы к временным рядам (PromQL)\n<size:8>[<color:#6366f1>HTTP]</size>
 SystemMonitoringMetricsCollector .[#6366f1,thickness=2].> SystemMonitoringMetricsStorage : <color:#6366f1>Скрейпинг и запись метрик\n<size:8>[<color:#6366f1>HTTP]</size>
-SystemMonitoringMetricsStorage .[#6366f1,thickness=2].> SystemMonitoringAlerting : <color:#6366f1>Вычисление правил алертов\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringOtelCollector .[#6366f1,thickness=2].> SystemMonitoringTraceBackend : <color:#6366f1>Экспорт трейсов (OTLP/Jaeger gRPC)\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringOtelCollector .[#6366f1,thickness=2].> SystemMonitoringMetricsStorage : <color:#6366f1>Remote write метрик (OTLP → TSDB)\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemMonitoringMetricsStorage .[#6366f1,thickness=2].> SystemMonitoringAlerting : <color:#6366f1>Запросы для правил алертов (PromQL)\n<size:8>[<color:#6366f1>HTTP]</size>
 SystemMonitoringLogCollector .[#6366f1,thickness=2].> SystemLoadBalancer : <color:#6366f1>Сбор access/error логов Nginx\n<size:8>[<color:#6366f1>TCP]</size>
 SystemMonitoringLogCollector .[#6366f1,thickness=2].> SystemFront : <color:#6366f1>Сбор логов веб-сервера и SPA\n<size:8>[<color:#6366f1>TCP]</size>
 SystemMonitoringLogCollector .[#6366f1,thickness=2].> SystemApiGateway : <color:#6366f1>Сбор логов шлюза (запросы, ошибки)\n<size:8>[<color:#6366f1>TCP]</size>
@@ -143,6 +165,10 @@ SystemMonitoringMetricsCollector .[#6366f1,thickness=2].> SystemIam : <color:#63
 SystemMonitoringMetricsCollector .[#6366f1,thickness=2].> SystemBackend : <color:#6366f1>Скрейпинг метрик\n<size:8>[<color:#6366f1>HTTP]</size>
 SystemMonitoringMetricsCollector .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>HTTP]</size>
 SystemMonitoringMetricsCollector .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>Сбор метрик Kafka\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemApiGateway .[#6366f1,thickness=2].> SystemMonitoringOtelCollector : <color:#6366f1>OTLP: метрики и трейсы (W3C Trace \n<color:#6366f1>Context)\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemApiGateway .[#15803d,thickness=2].> SystemMonitoringApmPlatform : <color:#15803d>APM agent / SDK\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemBackend .[#6366f1,thickness=2].> SystemMonitoringOtelCollector : <color:#6366f1>OTLP: метрики и трейсы\n<size:8>[<color:#6366f1>HTTP]</size>
+SystemBackend .[#15803d,thickness=2].> SystemMonitoringApmPlatform : <color:#15803d>APM agent / SDK\n<size:8>[<color:#15803d>HTTPS]</size>
 SystemLoadBalancer .[#6366f1,thickness=2].> SystemFront : <color:#6366f1>Раздача статики и проксирование API\n<size:8>[<color:#6366f1>HTTP]</size>
 SystemFront .[#6366f1,thickness=2].> SystemApiGateway : <color:#6366f1>Вызовы API с фронтенда\n<size:8>[<color:#6366f1>HTTP]</size>
 SystemApiGateway .[#15803d,thickness=2].> SystemIam : <color:#15803d>Валидация JWT, проверка прав, JWKS\n<size:8>[<color:#15803d>HTTPS]</size>

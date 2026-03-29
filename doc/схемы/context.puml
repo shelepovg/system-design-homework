@@ -74,7 +74,7 @@ rectangle "Система" <<System>> as System {
   skinparam RectangleFontColor<<System>> #2b85e7
   skinparam RectangleBorderStyle<<System>> dashed
 
-  rectangle "Система мониторинга\n\nСбор логов и метрик, обработка, хранение, дашборды и алертинг" <<SystemMonitoring>> as SystemMonitoring
+  rectangle "Система мониторинга\n\nЛоги, метрики, APM, распределённая трассировка (OpenTelemetry → Jaeger/Zipkin), дашборды и алертинг (NFR-009, 2.09)" <<SystemMonitoring>> as SystemMonitoring
   rectangle "load-balancer\n<size:10>[[Nginx]]</size>\n\nЕдиная точка входа: распределение трафика, TLS termination" <<SystemLoadBalancer>> as SystemLoadBalancer
   rectangle "front\n<size:10>[[React]]</size>\n\nВеб-интерфейс для взаимодействия с системой" <<SystemFront>> as SystemFront
   rectangle "api-gateway\n<size:10>[[Spring Cloud Gateway]]</size>\n\nМаршрутизация API, аутентификация (JWT), авторизация (RBAC), rate limiting, публикация событий 401/403 и логина (3.02)" <<SystemApiGateway>> as SystemApiGateway
@@ -95,15 +95,18 @@ SystemApiGateway .[#15803d,thickness=2].> SystemIam : <color:#15803d>Валид�
 SystemApiGateway .[#6366f1,thickness=2].> SystemBackend : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>HTTP]</size>
 SystemApiGateway .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>Публикация событий 401/403, логин \n<color:#6366f1>успех/неудача, 429 (3.02)\n<size:8>[<color:#6366f1>TCP]</size>
 SystemApiGateway .[#15803d,thickness=2].> SystemSecretsVault : <color:#15803d>Получение секретов (IAM client_secret, \n<color:#15803d>rate-limit config)\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemApiGateway .[#8D8D8D,thickness=2].> SystemMonitoring : <color:#8D8D8D>[...]
 SystemMonitoring .[#6366f1,thickness=2].> SystemApiGateway : <color:#6366f1>[...]
 SystemBackend .[#15803d,thickness=2].> SystemIam : <color:#15803d>Синхронизация пользователей, ролей и \n<color:#15803d>сессий с Keycloak\n<size:8>[<color:#15803d>HTTPS]</size>
 SystemMonitoring .[#6366f1,thickness=2].> SystemIam : <color:#6366f1>[...]
 SystemBackend .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackend .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackend .[#15803d,thickness=2].> SystemSecretsVault : <color:#15803d>[...]\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemBackend .[#8D8D8D,thickness=2].> SystemMonitoring : <color:#8D8D8D>[...]
 SystemMonitoring .[#6366f1,thickness=2].> SystemBackend : <color:#6366f1>[...]
 SystemMonitoring .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]
 SystemMonitoring .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>[...]
 SystemApiGateway .[#15803d,thickness=2].> System_ext : <color:#15803d>Логин, refresh токенов, синхронизация \n<color:#15803d>пользователей\n<size:8>[<color:#15803d>HTTPS]</size>
 SystemBackend .[#15803d,thickness=2].> System_ext : <color:#15803d>[...]\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemMonitoring .[#15803d,thickness=2].> System_ext : <color:#15803d>Доставка алертов\n<size:8>[<color:#15803d>HTTPS]</size>
 @enduml
