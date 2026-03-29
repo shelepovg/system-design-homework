@@ -1,11 +1,15 @@
-# Подключение файла: GitLab → Settings → CI/CD → General pipelines →
-# «CI/CD configuration file» → infra/gitlab/.gitlab-ci.yml
+# Подключение: GitLab → Settings → CI/CD → General pipelines →
+# CI/CD configuration file → infra/gitlab/.gitlab-ci.yml
 #
-# Контур: образ API Gateway (infra/docker/services/api-gateway/Dockerfile), манифесты infra/k8s.
+# В репозитории нет исходников Java: есть только Dockerfile'ы (infra/docker/services/*),
+# ожидающие готовый JAR. Сборка образа и интеграционный тест запускаются, только если
+# в CI/CD Variables задан файл API_GATEWAY_JAR (тип File) — артефакт сборки Spring Boot.
+#
+# Всегда выполняется проверка манифестов Kubernetes (kubectl kustomize).
 # LikeC4 / npm в пайплайне не используются.
 #
-# Требования к runner: для build:docker и test:integration — docker executor с privileged
-# или Kubernetes executor с privileged-сервисом docker:dind.
+# Runner: validate:kustomize — обычный Docker/Kubernetes executor.
+# build:docker и test:integration — docker executor с privileged или dind с privileged.
 
 stages:
   - build
@@ -13,61 +17,56 @@ stages:
   - deploy
 
 variables:
-  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
   DOCKER_TLS_CERTDIR: "/certs"
   DOCKER_DRIVER: overlay2
   IMAGE_API_GATEWAY: $CI_REGISTRY_IMAGE/api-gateway
-  STUB_JAR: infra/gitlab/stub-gateway/target/stub-gateway-0.0.1-SNAPSHOT.jar
 
 default:
   interruptible: true
 
-cache:
-  key: stub-gateway-maven
-  paths:
-    - .m2/repository
-
 # --- build ---
 
-build:jars:
+validate:kustomize:
   stage: build
-  image: maven:3.9.9-eclipse-temurin-21-alpine
+  image:
+    name: bitnami/kubectl:1.31
+    entrypoint: [""]
   script:
-    - cd infra/gitlab/stub-gateway && mvn -B -DskipTests package
-  artifacts:
-    paths:
-      - infra/gitlab/stub-gateway/target/*.jar
-    expire_in: 2 days
+    - kubectl kustomize infra/k8s >/tmp/k8s-rendered.yaml
+    - test -s /tmp/k8s-rendered.yaml
+    - echo "Kustomize OK, строк:" && wc -l </tmp/k8s-rendered.yaml
 
 build:docker:
   stage: build
   image: docker:24-cli
   services:
     - docker:24-dind
-  needs:
-    - job: build:jars
-      artifacts: true
+  rules:
+    - if: $API_GATEWAY_JAR
   before_script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_JOB_TOKEN" "$CI_REGISTRY"
   script:
-    - test -f "$STUB_JAR"
+    - test -f "$API_GATEWAY_JAR"
+    - cp "$API_GATEWAY_JAR" "$CI_PROJECT_DIR/gateway.jar"
     - |
       docker build \
         -f infra/docker/services/api-gateway/Dockerfile \
-        --build-arg "JAR_FILE=$STUB_JAR" \
+        --build-arg JAR_FILE=gateway.jar \
         -t "$IMAGE_API_GATEWAY:$CI_COMMIT_SHA" \
         -t "$IMAGE_API_GATEWAY:latest" \
         "$CI_PROJECT_DIR"
     - docker push "$IMAGE_API_GATEWAY:$CI_COMMIT_SHA"
     - docker push "$IMAGE_API_GATEWAY:latest"
 
-# --- test (интеграционная проверка образа) ---
+# --- test ---
 
 test:integration:
   stage: test
   image: docker:24-cli
   services:
     - docker:24-dind
+  rules:
+    - if: $API_GATEWAY_JAR
   needs:
     - job: build:docker
   before_script:
@@ -86,6 +85,10 @@ test:integration:
       done
     - curl -sfS http://127.0.0.1:8080/actuator/health | grep -q '"status":"UP"'
     - docker stop gw-ci
+    - echo "GATEWAY_IMAGE_TESTED=1" > gateway-tested.env
+  artifacts:
+    reports:
+      dotenv: gateway-tested.env
 
 # --- deploy ---
 
@@ -95,7 +98,9 @@ deploy:kubernetes:
     name: bitnami/kubectl:1.31
     entrypoint: [""]
   needs:
+    - job: validate:kustomize
     - job: test:integration
+      optional: true
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       when: manual
@@ -108,5 +113,10 @@ deploy:kubernetes:
     - mkdir -p ~/.kube
     - cp "$KUBE_CONFIG" ~/.kube/config
     - kubectl apply -k infra/k8s
-    - kubectl -n api-gateway set image deployment/api-gateway api-gateway="$IMAGE_API_GATEWAY:$CI_COMMIT_SHA"
-    - kubectl -n api-gateway rollout status deployment/api-gateway --timeout=180s
+    - |
+      if [ "${GATEWAY_IMAGE_TESTED:-}" = "1" ]; then
+        kubectl -n api-gateway set image deployment/api-gateway api-gateway="$IMAGE_API_GATEWAY:$CI_COMMIT_SHA"
+        kubectl -n api-gateway rollout status deployment/api-gateway --timeout=180s
+      else
+        echo "Образ gateway в кластере не обновлялся: нет успешного test:integration (задайте API_GATEWAY_JAR и прогоните build+test), либо выполните kubectl set image вручную."
+      fi
