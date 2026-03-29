@@ -10,6 +10,9 @@
 #
 # Runner: validate:kustomize — обычный Docker/Kubernetes executor.
 # build:docker и test:integration — docker executor с privileged или dind с privileged.
+#
+# Уведомления в Telegram (MVP): только (1) любой сбой пайплайна, (2) успешный деплой.
+# Не уведомляем об успешных build/test — меньше шума, пока нет отдельного канала/сервиса логов CI.
 
 stages:
   - build
@@ -120,3 +123,45 @@ deploy:kubernetes:
       else
         echo "Образ gateway в кластере не обновлялся: нет успешного test:integration (задайте API_GATEWAY_JAR и прогоните build+test), либо выполните kubectl set image вручную."
       fi
+
+# --- уведомления (стадия .post, после всех объявленных stages) ---
+
+.telegram_notify_base:
+  image: curlimages/curl:8.5.0
+  allow_failure: true
+
+# Любой упавший job (validate, build, test, deploy) — один отчёт в Telegram
+notify:telegram-pipeline-failed:
+  extends: .telegram_notify_base
+  stage: .post
+  rules:
+    - if: '$TELEGRAM_BOT_TOKEN && $TELEGRAM_CHAT_ID'
+      when: on_failure
+  script:
+    - |
+      TEXT="❌ CI FAILED: ${CI_PROJECT_NAME}
+      Ветка: ${CI_COMMIT_REF_NAME}
+      Коммит: ${CI_COMMIT_SHORT_SHA}
+      Ссылка: ${CI_PIPELINE_URL}"
+      curl -sS --max-time 30 -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+        -d "chat_id=${TELEGRAM_CHAT_ID}" \
+        --data-urlencode "text=${TEXT}" || true
+
+# Только успешное завершение ручного deploy на main (событие «выкладка прошла»)
+notify:telegram-deploy-success:
+  extends: .telegram_notify_base
+  stage: .post
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $TELEGRAM_BOT_TOKEN && $TELEGRAM_CHAT_ID'
+  needs:
+    - job: deploy:kubernetes
+  script:
+    - |
+      TEXT="✅ DEPLOY OK: ${CI_PROJECT_NAME}
+      Ветка: ${CI_COMMIT_REF_NAME}
+      Коммит: ${CI_COMMIT_SHORT_SHA}
+      Пайплайн: ${CI_PIPELINE_URL}
+      K8s: apply + при наличии GATEWAY_IMAGE_TESTED — rollout api-gateway."
+      curl -sS --max-time 30 -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+        -d "chat_id=${TELEGRAM_CHAT_ID}" \
+        --data-urlencode "text=${TEXT}" || true
