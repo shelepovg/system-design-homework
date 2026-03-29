@@ -1,0 +1,23 @@
+# Скопируйте в terraform.tfvars и подставьте свои значения.
+# cp terraform.tfvars.example terraform.tfvars
+
+aws_region  = "eu-central-1"
+project_name = "sd-homework"
+environment  = "prod"
+
+# Для учебной песочницы можно отключить NAT и снизить счёт.
+enable_nat_gateway = true
+
+# Опционально: SSH на bastion (в этом шаблоне bastion не создаётся — используйте SSM Session Manager).
+# key_name          = "my-keypair"
+# ssh_cidr_blocks   = ["203.0.113.10/32"]
+
+# Размеры ВМ (согласуйте с likec4/deployment.c4 metadata sizing_* и 4.01).
+instance_type_app         = "t3.large"
+instance_type_postgresql  = "r6i.large"
+instance_type_redis       = "r6i.large"
+postgresql_data_volume_gb = 200
+redis_data_volume_gb      = 50
+
+# true — terraform destroy сможет удалить непустой bucket (только для тестов).
+s3_force_destroy = false
