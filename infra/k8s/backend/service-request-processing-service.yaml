@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: request-processing-service
+  namespace: backend
+  labels:
+    app.kubernetes.io/name: request-processing-service
+    app.kubernetes.io/part-of: system-design
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: request-processing-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
