@@ -1,0 +1,11 @@
+---
+# Пароль приложения к БД — в проде: ansible-vault encrypt_string … и подключите vault.yml
+app_db_name: appdb
+app_db_schema: app
+app_db_user: appuser
+# Смените и храните в vault:
+app_db_password: "CHANGE_ME_USE_VAULT"
+
+postgresql_rpm_major: "15"
+postgresql_data_dir: "/var/lib/pgsql/data"
+postgresql_service: "postgresql"
