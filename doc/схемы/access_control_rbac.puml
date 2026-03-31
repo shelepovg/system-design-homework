@@ -43,11 +43,6 @@ skinparam rectangle<<SystemApiGateway>>{
   FontColor #ffffff
   BorderColor #1892c5
 }
-skinparam rectangle<<SystemMonitoringAlerting>>{
-  BackgroundColor #23a2d9
-  FontColor #ffffff
-  BorderColor #1892c5
-}
 skinparam rectangle<<SystemBackendUserService>>{
   BackgroundColor #23a2d9
   FontColor #ffffff
@@ -113,7 +108,6 @@ rectangle "Система" <<System>> as System {
     rectangle "User Service\n<size:10>[[Spring Boot]]</size>\n\nПрофили, сессии, роли (RBAC), публикация событий назначения/снятия ролей в аудит (3.01, 3.02)" <<SystemBackendUserService>> as SystemBackendUserService
     rectangle "Audit Service\n<size:10>[[Spring Boot]]</size>\n\nАудит операций и безопасности: audit_logs, security_events (3.02)" <<SystemBackendAuditService>> as SystemBackendAuditService
   }
-  rectangle "Алертинг\n<size:10>[[Grafana Alerting]]</size>\n\nПравила алертов, группировка, уведомления (PagerDuty, Slack, Email)" <<SystemMonitoringAlerting>> as SystemMonitoringAlerting
   rectangle "iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management (Keycloak)" <<SystemIam>> as SystemIam
   rectangle "Хранение данных" <<SystemStorage>> as SystemStorage {
     skinparam RectangleBorderColor<<SystemStorage>> #2b85e7

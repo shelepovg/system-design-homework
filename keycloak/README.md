@@ -12,8 +12,10 @@
 
 - **Realm:** `system-design`
 - **Access token (JWT):** 15 мин (900 с), подпись RS256 (3.01).
-- **Refresh token:** rotation (одноразовое использование), отзыв при использовании (3.01).
-- **SSO Session Idle:** 30 мин (1800 с) — таймаут неактивности (FR-002).
+- **Refresh token:** rotation (одноразовое использование), отзыв при использовании (3.01); действует в пределах SSO-сессии (см. ниже).
+- **SSO Session Idle:** 30 мин (1800 с) — таймаут неактивности (`ssoSessionIdleTimeout`, FR-002).
+- **SSO Session Max:** **24 ч** (86400 с) — максимальная длительность сессии с момента входа (`ssoSessionMaxLifespan`); после истечения требуется повторный логин, даже при наличии refresh token (3.01).
+- **Offline session (опционально):** `offlineSessionIdleTimeout` 30 суток — только для клиентов с `offline_access`, не продлевает интерактивную SSO сверх 24 ч без отдельной политики.
 - **Защита от brute-force:** включена (1.01, 2.08): `failureFactor`, `maxFailureWaitSeconds`, блокировка после N неудачных попыток.
 - **Клиенты:**
   - **system-design-web** — публичный, SPA; Authorization Code + PKCE; `redirectUris` и `webOrigins` задать под окружение.

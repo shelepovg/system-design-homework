@@ -1,0 +1,25 @@
+# Полный контур приложений из likec4/model.c4 + deployment.c4 (k8s_prod).
+# Вне кластера по модели остаются: PostgreSQL, Redis, Kafka, Keycloak, Vault (ВМ / managed).
+#
+# kubectl apply -k infra/k8s
+#
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespaces.yaml
+  - config/platform-configmap.yaml
+  - config/platform-secret.yaml
+  - api-gateway/deployment.yaml
+  - api-gateway/service.yaml
+  - api-gateway/ingress-api.yaml
+  - backend/deployment-user-service.yaml
+  - backend/service-user-service.yaml
+  - backend/deployment-request-processing-service.yaml
+  - backend/service-request-processing-service.yaml
+  - backend/deployment-payment-service.yaml
+  - backend/service-payment-service.yaml
+  - backend/deployment-notification-service.yaml
+  - backend/service-notification-service.yaml
+  - backend/deployment-audit-service.yaml
+  - backend/service-audit-service.yaml

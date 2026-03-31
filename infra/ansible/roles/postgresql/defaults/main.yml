@@ -1,0 +1,11 @@
+---
+postgresql_rpm_major: "15"
+postgresql_data_dir: "/var/lib/pgsql/data"
+postgresql_service: "postgresql"
+
+app_db_name: appdb
+app_db_schema: app
+app_db_user: appuser
+app_db_password: "CHANGE_ME"
+
+postgresql_allowed_cidr: "10.0.0.0/16"

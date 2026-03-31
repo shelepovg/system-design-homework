@@ -1,0 +1,7 @@
+---
+# Полный прогон: Docker на app, PostgreSQL на хосте БД.
+- name: Установка Docker и зависимостей (tier приложений)
+  ansible.builtin.import_playbook: docker.yml
+
+- name: Установка PostgreSQL, пользователь и схема
+  ansible.builtin.import_playbook: postgresql.yml

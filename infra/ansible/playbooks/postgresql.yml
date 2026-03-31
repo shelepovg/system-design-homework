@@ -1,0 +1,7 @@
+---
+- name: PostgreSQL — установка и настройка БД
+  hosts: postgresql
+  become: true
+  roles:
+    - role: postgresql
+      tags: [postgresql, db]

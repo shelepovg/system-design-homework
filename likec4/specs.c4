@@ -92,6 +92,51 @@ specification {
     }
   }
 
+  // Развёртывание (C4 deployment / physical): см. deployment.c4, view deployment_production
+  deploymentNode environment {
+    notation "Среда развёртывания (prod, staging, …)"
+    style {
+      color color_software-system
+      shape rectangle
+      opacity 15%
+    }
+  }
+
+  deploymentNode zone {
+    notation "Зона: АЗ, логический слой (VM / Kubernetes)"
+    style {
+      color color_container
+      shape rectangle
+      opacity 12%
+    }
+  }
+
+  deploymentNode vm {
+    notation "Виртуальная машина (stateful, периметр, IAM вне Kubernetes)"
+    style {
+      color slate
+      shape rectangle
+    }
+  }
+
+  deploymentNode kubernetes {
+    notation "Кластер Kubernetes"
+    style {
+      color blue
+      shape rectangle
+      opacity 18%
+    }
+  }
+
+  deploymentNode kubernetes_namespace {
+    notation "Namespace Kubernetes"
+    style {
+      color sky
+      shape rectangle
+      opacity 10%
+    }
+  }
+
   relationship http {
     color indigo
     //tail normal

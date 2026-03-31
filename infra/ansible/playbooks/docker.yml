@@ -1,0 +1,7 @@
+---
+- name: Docker на ВМ приложений
+  hosts: app
+  become: true
+  roles:
+    - role: docker
+      tags: [docker]

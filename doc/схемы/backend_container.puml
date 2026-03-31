@@ -18,11 +18,6 @@ skinparam rectangle<<SystemApiGateway>>{
   FontColor #ffffff
   BorderColor #1892c5
 }
-skinparam rectangle<<SystemMonitoring>>{
-  BackgroundColor #2b85e7
-  FontColor #f1ffff
-  BorderColor #1e73ce
-}
 skinparam rectangle<<SystemBackendUserService>>{
   BackgroundColor #23a2d9
   FontColor #ffffff
@@ -73,13 +68,17 @@ skinparam rectangle<<SystemSecretsVault>>{
   FontColor #ffffff
   BorderColor #1892c5
 }
+skinparam rectangle<<SystemMonitoring>>{
+  BackgroundColor #2b85e7
+  FontColor #f1ffff
+  BorderColor #1e73ce
+}
 rectangle "Система" <<System>> as System {
   skinparam RectangleBorderColor<<System>> #2b85e7
   skinparam RectangleFontColor<<System>> #2b85e7
   skinparam RectangleBorderStyle<<System>> dashed
 
   rectangle "api-gateway\n<size:10>[[Spring Cloud Gateway]]</size>\n\nМаршрутизация API, аутентификация (JWT), авторизация (RBAC), rate limiting, публикация событий 401/403 и логина (3.02)" <<SystemApiGateway>> as SystemApiGateway
-  rectangle "Система мониторинга\n\nСбор логов и метрик, обработка, хранение, дашборды и алертинг" <<SystemMonitoring>> as SystemMonitoring
   rectangle "Обработка пользовательских запросов" <<SystemBackend>> as SystemBackend {
     skinparam RectangleBorderColor<<SystemBackend>> #2b85e7
     skinparam RectangleFontColor<<SystemBackend>> #2b85e7
@@ -95,6 +94,7 @@ rectangle "Система" <<System>> as System {
   rectangle "Хранение данных\n\nБД (master + read replicas), кэш, хранилище бэкапов. Запись — в master, чтение — с реплик (2.13, 2.14)." <<SystemStorage>> as SystemStorage
   queue "Event Bus\n<size:10>[[Apache Kafka]]</size>\n\nАсинхронные события между сервисами (в т.ч. audit.events, security.events для аудита — 3.02)" <<SystemEventBus>> as SystemEventBus
   rectangle "Vault (секреты)\n<size:10>[[HashiCorp Vault]]</size>\n\nУправление секретами: БД, Redis, Kafka, IAM client_secret, платёжные API-ключи (3.04)" <<SystemSecretsVault>> as SystemSecretsVault
+  rectangle "Система мониторинга\n\nЛоги, метрики, APM, распределённая трассировка (OpenTelemetry → Jaeger/Zipkin), дашборды и алертинг (NFR-009, 2.09)" <<SystemMonitoring>> as SystemMonitoring
 }
 rectangle "Внешние системы\n\nВнешние системы" <<System_ext>> as System_ext
 
@@ -102,20 +102,25 @@ SystemBackendUserService .[#15803d,thickness=2].> SystemIam : <color:#15803d>С�
 SystemBackendUserService .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendUserService .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>Публикация событий назначения/снятия \n<color:#6366f1>ролей (ROLE_GRANTED, ROLE_REVOKED)\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendUserService .[#15803d,thickness=2].> SystemSecretsVault : <color:#15803d>Получение секретов (БД, Redis, IAM \n<color:#15803d>client)\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemBackendUserService .[#8D8D8D,thickness=2].> SystemMonitoring : <color:#8D8D8D>[...]
 SystemBackendRequestProcessingService .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendRequestProcessingService .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>Публикация событий (уведомления, аудит)\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendRequestProcessingService .[#15803d,thickness=2].> SystemSecretsVault : <color:#15803d>Получение секретов (БД, Redis, Kafka)\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemBackendRequestProcessingService .[#8D8D8D,thickness=2].> SystemMonitoring : <color:#8D8D8D>[...]
 SystemBackendPaymentService .[#15803d,thickness=2].> System_ext : <color:#15803d>Инициация платежа; приём Webhook\n<size:8>[<color:#15803d>HTTPS]</size>
 SystemBackendPaymentService .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendPaymentService .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>События платежей (уведомления, аудит)\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendPaymentService .[#15803d,thickness=2].> SystemSecretsVault : <color:#15803d>Получение секретов (БД, платёжный API \n<color:#15803d>key, webhook secret)\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemBackendPaymentService .[#8D8D8D,thickness=2].> SystemMonitoring : <color:#8D8D8D>[...]
 SystemBackendNotificationService .[#15803d,thickness=2].> System_ext : <color:#15803d>Отправка (Email, SMS, Push)\n<size:8>[<color:#15803d>HTTPS]</size>
 SystemBackendNotificationService .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendNotificationService .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>Потребление событий уведомлений\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendNotificationService .[#15803d,thickness=2].> SystemSecretsVault : <color:#15803d>Получение секретов (БД, Kafka, провайдер \n<color:#15803d>уведомлений)\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemBackendNotificationService .[#8D8D8D,thickness=2].> SystemMonitoring : <color:#8D8D8D>[...]
 SystemBackendAuditService .[#6366f1,thickness=2].> SystemStorage : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendAuditService .[#6366f1,thickness=2].> SystemEventBus : <color:#6366f1>Потребление событий аудита и \n<color:#6366f1>безопасности (audit.events, \n<color:#6366f1>security.events)\n<size:8>[<color:#6366f1>TCP]</size>
 SystemBackendAuditService .[#15803d,thickness=2].> SystemSecretsVault : <color:#15803d>Получение секретов (БД, Kafka)\n<size:8>[<color:#15803d>HTTPS]</size>
+SystemBackendAuditService .[#8D8D8D,thickness=2].> SystemMonitoring : <color:#8D8D8D>[...]
 SystemApiGateway .[#6366f1,thickness=2].> SystemBackendUserService : <color:#6366f1>Маршрутизация /api/users, профиль, \n<color:#6366f1>сессии\n<size:8>[<color:#6366f1>HTTP]</size>
 SystemApiGateway .[#6366f1,thickness=2].> SystemBackendRequestProcessingService : <color:#6366f1>Маршрутизация /api/requests\n<size:8>[<color:#6366f1>HTTP]</size>
 SystemApiGateway .[#6366f1,thickness=2].> SystemBackendPaymentService : <color:#6366f1>Маршрутизация /api/payments\n<size:8>[<color:#6366f1>HTTP]</size>

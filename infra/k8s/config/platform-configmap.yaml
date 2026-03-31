@@ -1,0 +1,35 @@
+# Плейсхолдеры интеграций: в архитектуре PostgreSQL, Redis, Kafka, Keycloak на ВМ / managed —
+# подставьте реальные host/DNS (или Internal Load Balancer) перед выкладкой.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-env
+  namespace: api-gateway
+  labels:
+    app.kubernetes.io/part-of: system-design
+data:
+  SPRING_PROFILES_ACTIVE: "kubernetes"
+  # OAuth2 Resource Server / маршрутизация к IAM
+  SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://keycloak.example/realms/app"
+  # Маршруты к сервисам внутри кластера (FQDN Kubernetes DNS)
+  USER_SERVICE_URI: "http://user-service.backend.svc.cluster.local:8080"
+  REQUEST_PROCESSING_SERVICE_URI: "http://request-processing-service.backend.svc.cluster.local:8080"
+  PAYMENT_SERVICE_URI: "http://payment-service.backend.svc.cluster.local:8080"
+  NOTIFICATION_SERVICE_URI: "http://notification-service.backend.svc.cluster.local:8080"
+  AUDIT_SERVICE_URI: "http://audit-service.backend.svc.cluster.local:8080"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-env
+  namespace: backend
+  labels:
+    app.kubernetes.io/part-of: system-design
+data:
+  SPRING_PROFILES_ACTIVE: "kubernetes"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.example.internal:5432/appdb"
+  SPRING_DATASOURCE_USERNAME: "appuser"
+  SPRING_DATA_REDIS_HOST: "redis.example.internal"
+  SPRING_DATA_REDIS_PORT: "6379"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka.example.internal:9092"
+  SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "https://keycloak.example/realms/app"

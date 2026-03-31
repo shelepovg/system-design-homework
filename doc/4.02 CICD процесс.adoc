@@ -1,1 +1,105 @@
 === CI/CD процесс
+
+Описание согласовано с развёртыванием приложений в Kubernetes (регион A, `ns_gateway` / `ns_backend` в `likec4/deployment.c4`, документ *4.01 Схема развертывания* — интерактивные диаграммы развёртывания (`deployment_all`, `deployment_production`, `deployment_staging`) на https://shelepovg.github.io/system-design-homework/[GitHub Pages^], см. прямые ссылки в 4.01; растровые копии — `doc/images/deployment_*.png`) и с артефактами в репозитории: `infra/gitlab/.gitlab-ci.yml`, `infra/docker/`, `infra/k8s/`, `infra/terraform/`, `infra/ansible/`.
+
+В репозитории *нет* исходного кода микросервисов и API Gateway — только *Dockerfile*'ы (`infra/docker/services/api-gateway/Dockerfile`, `infra/docker/services/spring-boot/Dockerfile`), рассчитанные на упаковку уже собранного JAR. Соответственно, в GitLab CI *нет* шага Maven/Gradle по умолчанию; образ собирается только если в настройках CI передан файл с артефактом (см. ниже).
+
+==== Инструмент и расположение конфигурации
+
+* *Платформа CI/CD:* GitLab CI.
+* *Файл пайплайна:* `infra/gitlab/.gitlab-ci.yml` (в GitLab: *Settings* → *CI/CD* → *General pipelines* → *CI/CD configuration file* → `infra/gitlab/.gitlab-ci.yml`).
+
+Пайплайн GitLab *не* выполняет сборку диаграмм LikeC4 и *не* вызывает `npm`. Публикация статики на GitHub Pages — отдельный workflow `.github/workflows/pages.yml`.
+
+==== Стадии пайплайна
+
+[options="header",cols="1,3"]
+|===
+| Стадия | Содержание
+
+| *build*
+| *Всегда:* `validate:kustomize` — рендер `kubectl kustomize infra/k8s` (проверка манифестов без доступа к кластеру). *Условно:* `build:docker` — сборка и push образа `api-gateway` в Docker Registry проекта GitLab (только если задана переменная `API_GATEWAY_JAR`).
+
+| *test*
+| *Условно:* `test:integration` — после успешного `build:docker`: pull образа, запуск контейнера, проверка `GET /actuator/health` (Spring Boot Actuator). Выполняется только при той же переменной `API_GATEWAY_JAR`.
+
+| *deploy*
+| *Вручную* на ветке `main`: `kubectl apply -k infra/k8s`; обновление образа `Deployment` API Gateway в кластере выполняется *только* если в том же пайплайне успешно прошёл `test:integration` (иначе применяются только манифесты, сообщение в логе job).
+
+| *.post* (зарезервированная стадия GitLab)
+| *Отчёты в Telegram* (опционально, см. ниже): при сбое любого job — `notify:telegram-pipeline-failed`; после *успешного* `deploy:kubernetes` на `main` — `notify:telegram-deploy-success`.
+|===
+
+==== Логирование и отчёты (Telegram, MVP)
+
+В `infra/gitlab/.gitlab-ci.yml` добавлены job'ы на стадии `.post` (выполняются после `build` / `test` / `deploy`):
+
+* *Обоснование объёма (MVP):* уведомления только при *ошибках* пайплайна и при *успешном деплое*. Успешные прогоны `validate:kustomize`, `build:docker` и `test:integration` в Telegram не дублируются — меньше шума, нет отдельного централизованного сервиса логов CI; позже можно добавить успехи сборки, drill-down по job, интеграцию с корпоративным чатом или SIEM.
+
+[options="header",cols="1,3"]
+|===
+| Job | Когда выполняется
+
+| `notify:telegram-pipeline-failed`
+| `when: on_failure` — упал любой job (валидация манифестов, сборка образа, интеграционный тест, деплой). В сообщении: проект, ветка, короткий SHA, ссылка на пайплайн.
+
+| `notify:telegram-deploy-success`
+| Только при *успешном* завершении `deploy:kubernetes` на ветке `main` (`needs: deploy:kubernetes`). Краткий отчёт об успешной выкладке и ссылка на пайплайн.
+|===
+
+Оба job используют образ `curlimages/curl`, вызывают `https://api.telegram.org/bot<token>/sendMessage`, помечены `allow_failure: true` (сбой доставки уведомления не ломает статус пайплайна).
+
+*Переменные CI/CD* (задаются в GitLab, *masked*, не коммитить в репозиторий):
+
+* *`TELEGRAM_BOT_TOKEN`* — токен бота (*BotFather*).
+* *`TELEGRAM_CHAT_ID`* — идентификатор чата или канала (куда бот может писать).
+
+Пока переменные не заданы, правила `rules` не создают job'ы уведомлений — пайплайн не меняется.
+
+==== Переменные CI/CD
+
+[options="header",cols="1,3"]
+|===
+| Переменная | Назначение
+
+| *`API_GATEWAY_JAR`* (тип *File*, необязательная)
+| Исполняемый JAR Spring Boot для API Gateway (или временной заглушки с Actuator), собранный вне этого репозитория (другой модуль, артефакт upstream-pipeline, ручная загрузка). Job копирует файл в `gateway.jar` в корне контекста и передаёт в `docker build` как `JAR_FILE`. Без этой переменной job'ы `build:docker` и `test:integration` *не* создаются.
+
+| *`KUBE_CONFIG`* (тип *File*, для деплоя)
+| Kubeconfig с правами `kubectl apply` и изменения `Deployment` в namespace `api-gateway`.
+
+| *`TELEGRAM_BOT_TOKEN`*, *`TELEGRAM_CHAT_ID`* (необязательные, *masked*)
+| Включают Telegram-уведомления (см. подраздел «Логирование и отчёты»).
+|===
+
+==== Сборка контейнера и реестр
+
+* *Dockerfile:* `infra/docker/services/api-gateway/Dockerfile` (образ на базе Eclipse Temurin 21 JRE, непривилегированный пользователь, healthcheck к `/actuator/health`).
+* *Теги образа:* `{CI_REGISTRY_IMAGE}/api-gateway:{CI_COMMIT_SHA}` и `:latest`; вход в реестр — `CI_JOB_TOKEN` / `CI_REGISTRY_USER`.
+* *Runner:* для `build:docker` и `test:integration` нужен *Docker-in-Docker* (`docker:24-dind`, режим *privileged*).
+* Упаковка остальных микросервисов по той же схеме — `infra/docker/services/spring-boot/Dockerfile`; отдельные job'ы в `.gitlab-ci.yml` можно добавить по аналогии, когда появятся артефакты сборки.
+
+==== Деплой в Kubernetes
+
+* Job `deploy:kubernetes` зависит от успешного `validate:kustomize`; `test:integration` указан как *optional* — если он не запускался (нет `API_GATEWAY_JAR`), деплой всё равно доступен.
+* Скрипт: `kubectl apply -k infra/k8s`, затем при `GATEWAY_IMAGE_TESTED=1` (передаётся из dotenv-отчёта успешного `test:integration`) — `kubectl set image` и `rollout status` для `deployment/api-gateway` в `api-gateway`.
+* Манифесты по-прежнему ссылаются на образы backend с тегом `*:local`; выкладка остальных сервисов в реестр — вне текущего контура пайплайна.
+
+==== Связь с Terraform и Ansible
+
+* *Terraform* (`infra/terraform/`) — инфраструктура VPC, EC2, ALB и др.; не вызывается из `infra/gitlab/.gitlab-ci.yml`.
+* *Ansible* (`infra/ansible/`) — подготовка ВМ (Docker, PostgreSQL); выполняется отдельно от GitLab CI.
+
+==== Секреты и соответствие 3.04
+
+Пароли БД, ключи Kafka, client secret Keycloak задаются через переменные CI/CD и Kubernetes Secrets (док. *3.04 Хранение и управление секретами*). Файл `infra/k8s/config/platform-secret.yaml` в репозитории — только плейсхолдеры.
+
+==== Краткая блок-схема потока
+
+```
+коммит
+  → validate:kustomize (всегда)
+  → при наличии API_GATEWAY_JAR: build:docker → test:integration
+  → на main (manual): deploy:kubernetes (apply; set image gateway — только после успешного test:integration)
+  → .post: при сбое — Telegram «CI FAILED»; при успешном deploy на main — Telegram «DEPLOY OK» (если заданы TELEGRAM_*)
+```

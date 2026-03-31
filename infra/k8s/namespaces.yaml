@@ -1,0 +1,24 @@
+# Соответствие likec4/deployment.c4: k8s_prod (SPA/static в модели на CDN — не выкатываем в кластер).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api-gateway
+  labels:
+    app.kubernetes.io/part-of: system-design
+    likec4/deployment: ns_gateway
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: backend
+  labels:
+    app.kubernetes.io/part-of: system-design
+    likec4/deployment: ns_backend
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+  labels:
+    app.kubernetes.io/part-of: system-design
+    likec4/deployment: ns_observability

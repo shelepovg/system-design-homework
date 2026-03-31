@@ -1,0 +1,21 @@
+---
+- name: Установить Docker, Compose-плагин и базовые зависимости
+  ansible.builtin.dnf:
+    name:
+      - docker
+      - docker-compose-plugin
+      - git
+      - ca-certificates
+    state: present
+
+- name: Включить и запустить Docker
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Добавить пользователя SSH в группу docker
+  ansible.builtin.user:
+    name: "{{ ansible_user | default('ec2-user') }}"
+    groups: docker
+    append: true

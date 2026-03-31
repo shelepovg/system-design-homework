@@ -1,0 +1,69 @@
+---
+- name: Установить PostgreSQL (server + клиент) и psycopg2 для модулей Ansible
+  ansible.builtin.dnf:
+    name:
+      - "postgresql{{ postgresql_rpm_major }}-server"
+      - "postgresql{{ postgresql_rpm_major }}"
+      - python3-psycopg2
+    state: present
+
+- name: Инициализировать кластер БД (идемпотентно)
+  ansible.builtin.command: postgresql-setup --initdb
+  args:
+    creates: "{{ postgresql_data_dir }}/PG_VERSION"
+  notify: Restart postgresql
+
+- name: Разрешить подключения с других хостов VPC (listen)
+  ansible.builtin.lineinfile:
+    path: "{{ postgresql_data_dir }}/postgresql.conf"
+    regexp: '^#?listen_addresses\s*='
+    line: "listen_addresses = '*'"
+    backup: true
+  notify: Restart postgresql
+
+- name: Разрешить аутентификацию по паролю из VPC (pg_hba)
+  ansible.builtin.lineinfile:
+    path: "{{ postgresql_data_dir }}/pg_hba.conf"
+    line: "host    all    all    {{ postgresql_allowed_cidr }}    scram-sha-256"
+    create: false
+    backup: true
+  notify: Restart postgresql
+
+- name: Сбросить кеш handlers перед модулями postgresql
+  ansible.builtin.meta: flush_handlers
+
+- name: Убедиться, что PostgreSQL запущен
+  ansible.builtin.systemd:
+    name: "{{ postgresql_service }}"
+    enabled: true
+    state: started
+
+- name: Дождаться порта 5432
+  ansible.builtin.wait_for:
+    port: 5432
+    host: 127.0.0.1
+    delay: 3
+    timeout: 60
+
+- name: Создать роль-пользователя приложения
+  become_user: postgres
+  community.postgresql.postgresql_user:
+    name: "{{ app_db_user }}"
+    password: "{{ app_db_password }}"
+    role_attr_flags: LOGIN
+
+- name: Создать базу данных приложения
+  become_user: postgres
+  community.postgresql.postgresql_db:
+    name: "{{ app_db_name }}"
+    owner: "{{ app_db_user }}"
+    encoding: UTF-8
+    template: template0
+    state: present
+
+- name: Создать схему приложения
+  become_user: postgres
+  community.postgresql.postgresql_schema:
+    database: "{{ app_db_name }}"
+    name: "{{ app_db_schema }}"
+    owner: "{{ app_db_user }}"

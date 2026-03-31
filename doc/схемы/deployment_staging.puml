@@ -1,0 +1,238 @@
+@startuml
+title "Staging"
+top to bottom direction
+
+hide stereotype
+skinparam ranksep 60
+skinparam nodesep 30
+skinparam {
+  arrowFontSize 10
+  defaultTextAlignment center
+  wrapWidth 200
+  maxMessageSize 100
+  shadowing false
+}
+
+skinparam rectangle<<StagingStaging_vmVm_staging_lbLoadBalancer>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<StagingStaging_k8sK8s_stagingNs_staging_appsFront>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<StagingStaging_k8sK8s_stagingNs_staging_appsAuditService>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<StagingStaging_k8sK8s_stagingNs_staging_appsApiGateway>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<StagingStaging_k8sK8s_stagingNs_staging_appsUserService>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<StagingStaging_k8sK8s_stagingNs_staging_appsRequestProcessingService>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<StagingStaging_k8sK8s_stagingNs_staging_appsPaymentService>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<StagingStaging_k8sK8s_stagingNs_staging_appsNotificationService>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<StagingStaging_k8sK8s_stagingNs_staging_appsOtelCollector>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam database<<StagingStaging_vmVm_staging_dataPostgresMaster>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam database<<StagingStaging_vmVm_staging_dataPostgresReplicas>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<StagingStaging_vmVm_staging_dataCache>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam queue<<StagingStaging_vmVm_staging_dataEventBus>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam queue<<StagingStaging_vmVm_staging_dataLogBus>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<StagingStaging_vmVm_staging_iamIam>>{
+  BackgroundColor #2b85e7
+  FontColor #f1ffff
+  BorderColor #1e73ce
+}
+skinparam rectangle<<StagingStaging_vmVm_staging_vaultSecretsVault>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+rectangle "Staging / Pre-prod" <<Staging>> as Staging {
+  skinparam RectangleBorderColor<<Staging>> #2b85e7
+  skinparam RectangleFontColor<<Staging>> #2b85e7
+  skinparam RectangleBorderStyle<<Staging>> dashed
+
+  rectangle "VM: stateful (staging)" <<StagingStaging_vm>> as StagingStaging_vm {
+    skinparam RectangleBorderColor<<StagingStaging_vm>> #23a2d9
+    skinparam RectangleFontColor<<StagingStaging_vm>> #23a2d9
+    skinparam RectangleBorderStyle<<StagingStaging_vm>> dashed
+
+    rectangle "VM: LB (staging)" <<StagingStaging_vmVm_staging_lb>> as StagingStaging_vmVm_staging_lb {
+      skinparam RectangleBorderColor<<StagingStaging_vmVm_staging_lb>> #64748b
+      skinparam RectangleFontColor<<StagingStaging_vmVm_staging_lb>> #64748b
+      skinparam RectangleBorderStyle<<StagingStaging_vmVm_staging_lb>> dashed
+
+      rectangle "load-balancer\n<size:10>[[Nginx]]</size>\n\nЕдиная точка входа: распределение трафика, TLS termination" <<StagingStaging_vmVm_staging_lbLoadBalancer>> as StagingStaging_vmVm_staging_lbLoadBalancer
+    }
+    rectangle "VM: Keycloak (staging)" <<StagingStaging_vmVm_staging_iam>> as StagingStaging_vmVm_staging_iam {
+      skinparam RectangleBorderColor<<StagingStaging_vmVm_staging_iam>> #64748b
+      skinparam RectangleFontColor<<StagingStaging_vmVm_staging_iam>> #64748b
+      skinparam RectangleBorderStyle<<StagingStaging_vmVm_staging_iam>> dashed
+
+      rectangle "iam\n<size:10>[[Keycloak]]</size>\n\nIdentity and Access Management (Keycloak)" <<StagingStaging_vmVm_staging_iamIam>> as StagingStaging_vmVm_staging_iamIam
+    }
+    rectangle "VM: БД, кэш, Kafka (staging)" <<StagingStaging_vmVm_staging_data>> as StagingStaging_vmVm_staging_data {
+      skinparam RectangleBorderColor<<StagingStaging_vmVm_staging_data>> #64748b
+      skinparam RectangleFontColor<<StagingStaging_vmVm_staging_data>> #64748b
+      skinparam RectangleBorderStyle<<StagingStaging_vmVm_staging_data>> dashed
+
+      database "PostgreSQL (master)\n<size:10>[[PostgreSQL]]</size>\n\nЕдиная точка записи: users_db, requests_db, payments_db, notifications_db, audit_db. Синхронная репликация на read replicas; RPO=0." <<StagingStaging_vmVm_staging_dataPostgresMaster>> as StagingStaging_vmVm_staging_dataPostgresMaster
+      database "PostgreSQL (read replicas)\n<size:10>[[PostgreSQL]]</size>\n\nЧтение только с реплик (streaming replication). Масштабирование чтения; ~28K RPS при cache hit 80% (2.07)." <<StagingStaging_vmVm_staging_dataPostgresReplicas>> as StagingStaging_vmVm_staging_dataPostgresReplicas
+      rectangle "Кэш\n<size:10>[[Redis Cluster]]</size>\n\nРаспределённый кэш Cache-Aside (профили, сессии, результаты запросов, rate limit)" <<StagingStaging_vmVm_staging_dataCache>> as StagingStaging_vmVm_staging_dataCache
+      queue "Event Bus\n<size:10>[[Apache Kafka]]</size>\n\nАсинхронные события между сервисами (в т.ч. audit.events, security.events для аудита — 3.02)" <<StagingStaging_vmVm_staging_dataEventBus>> as StagingStaging_vmVm_staging_dataEventBus
+      queue "Шина логов\n<size:10>[[Apache Kafka]]</size>\n\nБуфер и поток логов, сглаживание пиков" <<StagingStaging_vmVm_staging_dataLogBus>> as StagingStaging_vmVm_staging_dataLogBus
+    }
+    rectangle "VM: Vault (staging)" <<StagingStaging_vmVm_staging_vault>> as StagingStaging_vmVm_staging_vault {
+      skinparam RectangleBorderColor<<StagingStaging_vmVm_staging_vault>> #64748b
+      skinparam RectangleFontColor<<StagingStaging_vmVm_staging_vault>> #64748b
+      skinparam RectangleBorderStyle<<StagingStaging_vmVm_staging_vault>> dashed
+
+      rectangle "Vault (секреты)\n<size:10>[[HashiCorp Vault]]</size>\n\nУправление секретами: БД, Redis, Kafka, IAM client_secret, платёжные API-ключи (3.04)" <<StagingStaging_vmVm_staging_vaultSecretsVault>> as StagingStaging_vmVm_staging_vaultSecretsVault
+    }
+  }
+  rectangle "Kubernetes (staging)" <<StagingStaging_k8s>> as StagingStaging_k8s {
+    skinparam RectangleBorderColor<<StagingStaging_k8s>> #23a2d9
+    skinparam RectangleFontColor<<StagingStaging_k8s>> #23a2d9
+    skinparam RectangleBorderStyle<<StagingStaging_k8s>> dashed
+
+    rectangle "ns: apps (staging)" <<StagingStaging_k8sK8s_stagingNs_staging_apps>> as StagingStaging_k8sK8s_stagingNs_staging_apps {
+      skinparam RectangleBorderColor<<StagingStaging_k8sK8s_stagingNs_staging_apps>> #0284c7
+      skinparam RectangleFontColor<<StagingStaging_k8sK8s_stagingNs_staging_apps>> #0284c7
+      skinparam RectangleBorderStyle<<StagingStaging_k8sK8s_stagingNs_staging_apps>> dashed
+
+      rectangle "Сбор логов\n<size:10>[[Fluent Bit]]</size>\n\nАгенты на узлах: сбор и пересылка логов с сервисов" <<StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector>> as StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector
+      rectangle "Сбор метрик\n<size:10>[[Prometheus]]</size>\n\nPull-скрейпинг Prometheus с сервисов и экспортёров (RED/USE, NFR-009)" <<StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector>> as StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector
+      rectangle "front\n<size:10>[[React]]</size>\n\nВеб-интерфейс для взаимодействия с системой" <<StagingStaging_k8sK8s_stagingNs_staging_appsFront>> as StagingStaging_k8sK8s_stagingNs_staging_appsFront
+      rectangle "Audit Service\n<size:10>[[Spring Boot]]</size>\n\nАудит операций и безопасности: audit_logs, security_events (3.02)" <<StagingStaging_k8sK8s_stagingNs_staging_appsAuditService>> as StagingStaging_k8sK8s_stagingNs_staging_appsAuditService
+      rectangle "api-gateway\n<size:10>[[Spring Cloud Gateway]]</size>\n\nМаршрутизация API, аутентификация (JWT), авторизация (RBAC), rate limiting, публикация событий 401/403 и логина (3.02)" <<StagingStaging_k8sK8s_stagingNs_staging_appsApiGateway>> as StagingStaging_k8sK8s_stagingNs_staging_appsApiGateway
+      rectangle "User Service\n<size:10>[[Spring Boot]]</size>\n\nПрофили, сессии, роли (RBAC), публикация событий назначения/снятия ролей в аудит (3.01, 3.02)" <<StagingStaging_k8sK8s_stagingNs_staging_appsUserService>> as StagingStaging_k8sK8s_stagingNs_staging_appsUserService
+      rectangle "Request Processing Service\n<size:10>[[Spring Boot]]</size>\n\nОбработка запросов (PROCESS_DATA, REPORT, EXPORT, RESOURCES)" <<StagingStaging_k8sK8s_stagingNs_staging_appsRequestProcessingService>> as StagingStaging_k8sK8s_stagingNs_staging_appsRequestProcessingService
+      rectangle "Payment Service\n<size:10>[[Spring Boot]]</size>\n\nПлатежи, интеграция с провайдером, Outbox" <<StagingStaging_k8sK8s_stagingNs_staging_appsPaymentService>> as StagingStaging_k8sK8s_stagingNs_staging_appsPaymentService
+      rectangle "Notification Service\n<size:10>[[Spring Boot]]</size>\n\nУведомления (Email, SMS, Push), потребитель событий" <<StagingStaging_k8sK8s_stagingNs_staging_appsNotificationService>> as StagingStaging_k8sK8s_stagingNs_staging_appsNotificationService
+      rectangle "OpenTelemetry Collector\n<size:10>[[OpenTelemetry Collector]]</size>\n\nПриём OTLP (метрики, трейсы) от приложений; экспорт в хранилище метрик и в Jaeger/Zipkin" <<StagingStaging_k8sK8s_stagingNs_staging_appsOtelCollector>> as StagingStaging_k8sK8s_stagingNs_staging_appsOtelCollector
+    }
+  }
+}
+
+StagingStaging_k8sK8s_stagingNs_staging_appsFront .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsApiGateway : <color:#6366f1>Вызовы API с фронтенда\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsFront : <color:#6366f1>Сбор логов веб-сервера и SPA\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsFront : <color:#6366f1>Сбор метрик веб-сервера\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsApiGateway .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsUserService : <color:#6366f1>Маршрутизация /api/users, профиль, \n<color:#6366f1>сессии\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsApiGateway .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsRequestProcessingService : <color:#6366f1>Маршрутизация /api/requests\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsApiGateway .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsPaymentService : <color:#6366f1>Маршрутизация /api/payments\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsApiGateway .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsNotificationService : <color:#6366f1>Маршрутизация /api/notifications, \n<color:#6366f1>настройки\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsApiGateway .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsOtelCollector : <color:#6366f1>OTLP: метрики и трейсы (W3C Trace \n<color:#6366f1>Context)\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsApiGateway : <color:#6366f1>Сбор логов шлюза (запросы, ошибки)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsApiGateway : <color:#6366f1>Скрейпинг метрик шлюза\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsUserService .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsOtelCollector : <color:#6366f1>OTLP: метрики и трейсы\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsUserService : <color:#6366f1>Сбор логов приложения\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsUserService : <color:#6366f1>Скрейпинг метрик\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsRequestProcessingService .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsOtelCollector : <color:#6366f1>OTLP: метрики и трейсы\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsRequestProcessingService : <color:#6366f1>Сбор логов приложения\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsRequestProcessingService : <color:#6366f1>Скрейпинг метрик\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsPaymentService .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsOtelCollector : <color:#6366f1>OTLP: метрики и трейсы\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsPaymentService : <color:#6366f1>Сбор логов приложения\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsPaymentService : <color:#6366f1>Скрейпинг метрик\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsNotificationService .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsOtelCollector : <color:#6366f1>OTLP: метрики и трейсы\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsNotificationService : <color:#6366f1>Сбор логов приложения\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsNotificationService : <color:#6366f1>Скрейпинг метрик\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsAuditService .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsOtelCollector : <color:#6366f1>OTLP: метрики и трейсы\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsAuditService : <color:#6366f1>Сбор логов приложения\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsAuditService : <color:#6366f1>Скрейпинг метрик\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsUserService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataPostgresMaster : <color:#6366f1>Запись: users, sessions, roles\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsRequestProcessingService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataPostgresMaster : <color:#6366f1>Запись: запросы, история, вложения\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsPaymentService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataPostgresMaster : <color:#6366f1>Запись: транзакции, outbox\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsNotificationService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataPostgresMaster : <color:#6366f1>Запись: статусы доставки\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsAuditService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataPostgresMaster : <color:#6366f1>Запись: audit_logs, security_events\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataPostgresMaster : <color:#6366f1>Сбор логов PostgreSQL (master)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataPostgresMaster : <color:#6366f1>Сбор метрик PostgreSQL (master)\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsUserService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataPostgresReplicas : <color:#6366f1>Чтение: users, sessions, roles (с \n<color:#6366f1>реплик)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsRequestProcessingService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataPostgresReplicas : <color:#6366f1>Чтение: запросы, история (с реплик)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsPaymentService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataPostgresReplicas : <color:#6366f1>Чтение: транзакции, история (с реплик)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsNotificationService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataPostgresReplicas : <color:#6366f1>Чтение: уведомления, шаблоны (с реплик)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsAuditService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataPostgresReplicas : <color:#6366f1>Чтение: аудит (с реплик, расследования)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataPostgresReplicas : <color:#6366f1>Сбор логов PostgreSQL (replicas)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataPostgresReplicas : <color:#6366f1>Сбор метрик PostgreSQL (read replicas)\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsUserService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataCache : <color:#6366f1>Профили, сессии (Cache-Aside)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsRequestProcessingService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataCache : <color:#6366f1>Результаты запросов (Cache-Aside)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataCache : <color:#6366f1>Сбор логов Redis\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataCache : <color:#6366f1>Сбор метрик Redis\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsApiGateway .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataEventBus : <color:#6366f1>Публикация событий 401/403, логин \n<color:#6366f1>успех/неудача, 429 (3.02)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsUserService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataEventBus : <color:#6366f1>Публикация событий назначения/снятия \n<color:#6366f1>ролей (ROLE_GRANTED, ROLE_REVOKED)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsRequestProcessingService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataEventBus : <color:#6366f1>Публикация событий (уведомления, аудит)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsPaymentService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataEventBus : <color:#6366f1>События платежей (уведомления, аудит)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsNotificationService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataEventBus : <color:#6366f1>Потребление событий уведомлений\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsAuditService .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataEventBus : <color:#6366f1>Потребление событий аудита и \n<color:#6366f1>безопасности (audit.events, \n<color:#6366f1>security.events)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataEventBus : <color:#6366f1>Сбор логов Kafka\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataEventBus : <color:#6366f1>Сбор метрик Kafka\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_dataLogBus : <color:#6366f1>Пересылка логов в шину\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsApiGateway .[#15803d,thickness=2].> StagingStaging_vmVm_staging_vaultSecretsVault : <color:#15803d>Получение секретов (IAM client_secret, \n<color:#15803d>rate-limit config)\n<size:8>[<color:#15803d>HTTPS]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsUserService .[#15803d,thickness=2].> StagingStaging_vmVm_staging_vaultSecretsVault : <color:#15803d>Получение секретов (БД, Redis, IAM \n<color:#15803d>client)\n<size:8>[<color:#15803d>HTTPS]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsRequestProcessingService .[#15803d,thickness=2].> StagingStaging_vmVm_staging_vaultSecretsVault : <color:#15803d>Получение секретов (БД, Redis, Kafka)\n<size:8>[<color:#15803d>HTTPS]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsPaymentService .[#15803d,thickness=2].> StagingStaging_vmVm_staging_vaultSecretsVault : <color:#15803d>Получение секретов (БД, платёжный API \n<color:#15803d>key, webhook secret)\n<size:8>[<color:#15803d>HTTPS]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsNotificationService .[#15803d,thickness=2].> StagingStaging_vmVm_staging_vaultSecretsVault : <color:#15803d>Получение секретов (БД, Kafka, провайдер \n<color:#15803d>уведомлений)\n<size:8>[<color:#15803d>HTTPS]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsAuditService .[#15803d,thickness=2].> StagingStaging_vmVm_staging_vaultSecretsVault : <color:#15803d>Получение секретов (БД, Kafka)\n<size:8>[<color:#15803d>HTTPS]</size>
+StagingStaging_vmVm_staging_lbLoadBalancer .[#6366f1,thickness=2].> StagingStaging_k8sK8s_stagingNs_staging_appsFront : <color:#6366f1>Раздача статики и проксирование API\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_lbLoadBalancer : <color:#6366f1>Сбор access/error логов Nginx\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_lbLoadBalancer : <color:#6366f1>Скрейпинг метрик Nginx\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsApiGateway .[#15803d,thickness=2].> StagingStaging_vmVm_staging_iamIam : <color:#15803d>Валидация JWT, проверка прав, JWKS\n<size:8>[<color:#15803d>HTTPS]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsUserService .[#15803d,thickness=2].> StagingStaging_vmVm_staging_iamIam : <color:#15803d>Синхронизация пользователей, ролей и \n<color:#15803d>сессий с Keycloak\n<size:8>[<color:#15803d>HTTPS]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsLogCollector .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_iamIam : <color:#6366f1>Сбор логов Keycloak/IAM\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_k8sK8s_stagingNs_staging_appsMetricsCollector .[#6366f1,thickness=2].> StagingStaging_vmVm_staging_iamIam : <color:#6366f1>Сбор метрик Keycloak/IAM\n<size:8>[<color:#6366f1>HTTP]</size>
+@enduml

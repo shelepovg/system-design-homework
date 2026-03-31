@@ -49,7 +49,7 @@ rectangle "Система" <<System>> as System {
   skinparam RectangleBorderStyle<<System>> dashed
 
   rectangle "Обработка пользовательских запросов\n<size:10>[[Spring Boot]]</size>\n\nМикросервисы: пользователи, запросы, платежи, уведомления, аудит" <<SystemBackend>> as SystemBackend
-  rectangle "Система мониторинга\n\nСбор логов и метрик, обработка, хранение, дашборды и алертинг" <<SystemMonitoring>> as SystemMonitoring
+  rectangle "Система мониторинга\n\nЛоги, метрики, APM, распределённая трассировка (OpenTelemetry → Jaeger/Zipkin), дашборды и алертинг (NFR-009, 2.09)" <<SystemMonitoring>> as SystemMonitoring
   rectangle "Хранение данных" <<SystemStorage>> as SystemStorage {
     skinparam RectangleBorderColor<<SystemStorage>> #2b85e7
     skinparam RectangleFontColor<<SystemStorage>> #2b85e7
