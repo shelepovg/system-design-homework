@@ -77,3 +77,14 @@
 . (+) Настроен пайплайн GitLab CI (`infra/gitlab/.gitlab-ci.yml`): обязательная проверка `kubectl kustomize infra/k8s`; условная сборка и push образа `api-gateway` при переменной `API_GATEWAY_JAR` (файл JAR извне репозитория); интеграционный тест образа (`/actuator/health`); ручной деплой на `main` (`kubectl apply -k`, при успешном тесте — `set image` и rollout); уведомления в Telegram на стадии `.post` при сбое пайплайна и при успешном деплое (MVP, переменные `TELEGRAM_*`).
 . (+) Заполнены документы _4.02 CICD процесс_ и _4.03 Планы тестирования_: соответствие пайплайна и артефактам репозитория, переменные CI/CD, связь с Terraform/Ansible и секретами (3.04), планы тестов и связь с GitHub Actions (Vitest LikeC4).
 
+== Проект
+2026.04.05
+
+. (+) Устранено замечание по связке `namespaces.yaml` и Kustomize: в `infra/k8s/kustomization.yaml` подключены ресурсы observability в соответствии с _2.09 Observability_ (Prometheus, Grafana, алертинг через Alertmanager).
+. (+) Добавлен каталог `infra/k8s/observability/`: RBAC для Prometheus (`ServiceAccount`, `ClusterRole`, `ClusterRoleBinding`), конфигурация и `Deployment` + `Service` для Prometheus (образ `prom/prometheus`, retention TSDB 30 суток, скрейп self и подов с аннотациями `prometheus.io/*`, интеграция с Alertmanager по DNS кластера).
+. (+) Добавлены `ConfigMap` и `Deployment` + `Service` для Alertmanager (`prom/alertmanager`), минимальная маршрутизация алертов (заготовка под приёмники в проде).
+. (+) Добавлены `Secret` с учётными данными администратора Grafana (плейсхолдер пароля), `ConfigMap` с provisioning datasource Prometheus, `Deployment` + `Service` для Grafana (`grafana/grafana`), единая точка дашбордов по метрикам из Prometheus.
+. (+) В шапке `kustomization.yaml` зафиксировано соответствие документации: полный контур логов (Kafka, Vector, Elasticsearch, Loki) и трассировки (Jaeger/Zipkin, OpenTelemetry Collector) по модели остаётся за пределами данного kustomize; проверка сборки: `kubectl kustomize infra/k8s`.
+. (+) Зафиксированы ограничения MVP: данные Prometheus/Alertmanager/Grafana на `emptyDir`, пароль Grafana — сменить в проде; для сбора метрик с микросервисов потребуются аннотации на подах и endpoint метрик (например, Spring Boot Actuator).
+. (+) Вопрос «TLS терминируется здесь?» — по документации проекта: нет на этом ресурсе как на внешней границе для клиентов. В doc/3.03 и doc/2.08 TLS termination зафиксирована у load balancer (edge); клиент → LB: HTTPS. Внутри доверенного периметра (LB → Front / API Gateway) TLS опционален (doc/2.11). В файле _ingress-api.yaml_ задана только HTTP-маршрутизация в кластере. Отдельный spec.tls и Secret — если политика кластера требует HTTPS до Ingress-контроллера; это не отменяет смысл «клиентский HTTPS снимается на LB».
+
