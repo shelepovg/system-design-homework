@@ -103,4 +103,13 @@ views {
                 production,
                 staging
     }
+    deployment view deployment{
+        title 'System/Развёртывание/Верхнеуровневая диаграмма'
+        description 'Для презентации'
+
+        include production,
+                staging,
+                production.*,
+                staging.*,
+    } 
 }

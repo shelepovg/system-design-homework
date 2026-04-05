@@ -1,0 +1,72 @@
+@startuml
+title "Верхнеуровневая диаграмма"
+top to bottom direction
+
+hide stereotype
+skinparam ranksep 60
+skinparam nodesep 30
+skinparam {
+  arrowFontSize 10
+  defaultTextAlignment center
+  wrapWidth 200
+  maxMessageSize 100
+  shadowing false
+}
+
+skinparam rectangle<<StagingStaging_vm>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<StagingStaging_k8s>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionEdge_security>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_primary>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_dr>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+skinparam rectangle<<ProductionRegion_backup_geography>>{
+  BackgroundColor #23a2d9
+  FontColor #ffffff
+  BorderColor #1892c5
+}
+rectangle "Staging / Pre-prod" <<Staging>> as Staging {
+  skinparam RectangleBorderColor<<Staging>> #2b85e7
+  skinparam RectangleFontColor<<Staging>> #2b85e7
+  skinparam RectangleBorderStyle<<Staging>> dashed
+
+  rectangle "VM: stateful (staging)" <<StagingStaging_vm>> as StagingStaging_vm
+  rectangle "Kubernetes (staging)" <<StagingStaging_k8s>> as StagingStaging_k8s
+}
+rectangle "Production" <<Production>> as Production {
+  skinparam RectangleBorderColor<<Production>> #2b85e7
+  skinparam RectangleFontColor<<Production>> #2b85e7
+  skinparam RectangleBorderStyle<<Production>> dashed
+
+  rectangle "Edge: WAF, CDN, DDoS (NFR-005)\n\nУправляемые сервисы провайдера перед Nginx LB; TLS 1.3 до edge; не дублируют контейнеры в model.c4" <<ProductionEdge_security>> as ProductionEdge_security
+  rectangle "Регион A (основной): вычисления и первичные данные\n\nMulti-AZ внутри региона; RPO=0 для записи в master (2.13)" <<ProductionRegion_primary>> as ProductionRegion_primary
+  rectangle "Регион B (DR / второй географический контур)\n\nАсинхронная репликация БД из региона A; Kafka MirrorMaker 2 или второй кластер; при аварии A — переключение трафика (RTO, NFR-003)" <<ProductionRegion_dr>> as ProductionRegion_dr
+  rectangle "Регион C + копии: гео-бэкапы (≥2 региона отдельно от primary)\n\nНезависимые площадки для копий снимков/WAL; иная юрисдикция/аккаунт облака (NFR-006)" <<ProductionRegion_backup_geography>> as ProductionRegion_backup_geography
+}
+
+ProductionEdge_security .[#15803d,thickness=2].> ProductionRegion_primary : <color:#15803d>HTTPS
+ProductionRegion_primary .[#6366f1,thickness=2].> ProductionRegion_dr : <color:#6366f1>[...]\n<size:8>[<color:#6366f1>TCP]</size>
+ProductionRegion_primary .[#15803d,thickness=2].> ProductionRegion_backup_geography : <color:#15803d>Backup geo-replication\n<size:8>[<color:#15803d>HTTPS]</size>
+ProductionRegion_dr .[#6366f1,thickness=2].> ProductionRegion_backup_geography : <color:#6366f1>RDB/AOF снимки (опционально)\n<size:8>[<color:#6366f1>TCP]</size>
+StagingStaging_vm .[#6366f1,thickness=2].> StagingStaging_k8s : <color:#6366f1>Раздача статики и проксирование API\n<size:8>[<color:#6366f1>HTTP]</size>
+StagingStaging_k8s .[#8D8D8D,thickness=2].> StagingStaging_vm : <color:#8D8D8D>[...]
+StagingStaging_vm .[#15803d,thickness=2].> ProductionRegion_backup_geography : <color:#15803d>Репликация бэкапов: полный снимок, \n<color:#15803d>WAL-архив (PITR)\n<size:8>[<color:#15803d>HTTPS]</size>
+@enduml
