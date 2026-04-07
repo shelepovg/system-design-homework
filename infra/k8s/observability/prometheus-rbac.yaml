@@ -1,0 +1,45 @@
+# RBAC для Prometheus: service discovery подов/сервисов (аннотации prometheus.io/*).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: system-design
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus-system-design
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: system-design
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - services
+      - endpoints
+      - pods
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources:
+      - ingresses
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-system-design
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: system-design
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus-system-design
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: observability

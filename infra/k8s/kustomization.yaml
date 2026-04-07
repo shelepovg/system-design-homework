@@ -1,5 +1,7 @@
 # Полный контур приложений из likec4/model.c4 + deployment.c4 (k8s_prod).
 # Вне кластера по модели остаются: PostgreSQL, Redis, Kafka, Keycloak, Vault (ВМ / managed).
+# Observability (doc 2.09): Prometheus, Alertmanager, Grafana в namespace observability;
+# шина логов (Kafka), Vector, Elasticsearch, Loki, Jaeger/OTel — по модели вне этого kustomize.
 #
 # kubectl apply -k infra/k8s
 #
@@ -23,3 +25,11 @@ resources:
   - backend/service-notification-service.yaml
   - backend/deployment-audit-service.yaml
   - backend/service-audit-service.yaml
+  - observability/prometheus-rbac.yaml
+  - observability/prometheus-config.yaml
+  - observability/prometheus-deployment.yaml
+  - observability/alertmanager-config.yaml
+  - observability/alertmanager-deployment.yaml
+  - observability/grafana-secret.yaml
+  - observability/grafana-datasources.yaml
+  - observability/grafana-deployment.yaml

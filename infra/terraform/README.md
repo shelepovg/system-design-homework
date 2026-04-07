@@ -15,7 +15,7 @@
 | `vm_redis` | EC2 в `private_data` (вторая AZ) + data-том (установка Redis — вне Terraform). |
 | `vm_object_storage` / бэкапы / логи | `aws_s3_bucket` + IAM instance profile для приложений + gateway VPC endpoint на S3. |
 
-Сеть: VPC, публичные и private подсети в двух AZ, IGW, опциональный NAT, route tables, security groups с принципом least privilege между ALB → app → БД.
+Сеть: VPC, публичные и private подсети **до трёх AZ** в регионе (`locals.tf`: `min(3, …)` от списка AZ провайдера; если в регионе только 2 AZ — будет две), IGW, опциональный NAT, route tables, security groups с принципом least privilege между ALB → app → БД. Это согласуется с doc/2.08 (мульти-АЗ 2–3) и doc/4.01 (Multi-AZ в регионе); **не** дублирует полный сайзинг «≥3 инстанса на сервис в разных AZ» — для MVP по-прежнему одна ВМ приложения, см. `compute.tf`.
 
 ## Требования
 

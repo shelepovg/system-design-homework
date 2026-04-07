@@ -1,0 +1,151 @@
+= Распределённая система обработки пользовательских запросов
+:doctype: article
+:numbered:
+:icons: font
+:pdf-page-layout: landscape
+:pdf-page-size: A4
+:imagesdir: ../doc/images
+// :figure-caption!:
+// :lang: ru
+:author: Шелепов Григорий
+:course: Курс «System Design»
+
+[%notitle]
+== Титульный
+
+[sidebar]
+****
+[cols="1",frame=none,grid=none]
+|===
+^.^| _{course}_
+|===
+****
+
+<<<
+
+== Проверка связи
+
+[sidebar]
+****
+[cols="1",frame=none,grid=none]
+|===
+^.^| [.big]*Меня хорошо видно, слышно?*
+|===
+****
+
+<<<
+== О себе
+
+****
+[cols="1",frame=none,grid=none]
+|===
+^.^|  _{author}_
+
+^.^|  Архитектор
+|===
+****
+
+<<<
+
+== Цель и задачи проекта
+
+*Цель* — спроектировать архитектуру высоконагруженной системы.
+
+*Задачи*::
+
+. Зафиксировать функциональные и нефункциональные требования, риски.
+. Описать контекст, контейнеры, потоки данных, модель данных, API (OpenAPI), хранение (PostgreSQL, Redis).
+. Спроектировать ИБ системы (OAuth 2.0 / OIDC / JWT, RBAC, Vault, аудит).
+. Спроектировать мониторинг (метрики, логи, трассировка по NFR-009).
+. Задать развёртывание IaC (Terraform, Ansible), контейнеры и Kubernetes, CI/CD.
+
+<<<
+
+== Контекст системы
+
+Система взаимодействует с пользователями (веб, мобильное приложение), внешними платёжными и провайдерами уведомлений, IAM; внутренние сервисы изолированы за API Gateway.
+
+image::context.png[Контекстная диаграмма,pdfwidth=50%,align=center]
+
+<<<
+
+== Контейнерная архитектура backend
+
+API Gateway, доменные микросервисы, шина событий, кэш, интеграции с IAM и внешними API.
+
+image::backend_container.png[Контейнерная диаграмма backend,pdfwidth=90%,align=center]
+
+<<<
+
+== Модель данных
+
+Логическая модель по доменам: пользователи, запросы, платежи, уведомления.
+
+// image::data_model.png[Модель данных,width=780,align=center]
+image::data_model.png[Модель данных,pdfwidth=110%,align=center]
+
+<<<
+
+== Хранение и кэш
+
+PostgreSQL (master и read replicas), Redis, объектное хранилище бэкапов.
+
+image::db_container.png[Хранение данных,pdfwidth=50%,align=center]
+
+<<<
+
+== Безопасность и управление доступом
+
+Keycloak (IAM), RBAC с проверкой владельца ресурса, Vault для секретов, события безопасности и аудит.
+
+image::access_control_rbac.png[RBAC и связи с Vault / Event Bus,pdfwidth=50%,align=center]
+
+<<<
+
+== Observability
+
+Сбор метрик (Prometheus), дашборды и алерты (Grafana, Alertmanager), логи и трассировка.
+
+image::monitoring_container.png[Система мониторинга (детализация),pdfwidth=60%,align=center]
+
+<<<
+
+== Развёртывание
+
+Зоны edge, Kubernetes и ВМ, DR и гео-бэкапы; stateful-сервисы вне кластера или managed по модели; манифесты `infra/k8s/`, Terraform, Ansible.
+
+image::deployment.png[Схема развёртывания,pdfwidth=35%,align=center]
+
+<<<
+
+== Технологии
+
+*В проекте (репозиторий, инструменты и конфигурации)*::
+
+* Моделирование и схемы: *LikeC4*, экспорт в *PlantUML*, публикация на *GitHub Pages*; тесты контейнеров и связей (*Vitest*).
+* Контракты и данные: *OpenAPI 3* (`openapi/api-gateway.yaml`), *DBML* (`dbml/model.dbml`), экспорт диаграммы в PNG.
+* Безопасность как код: *Keycloak* (realm, клиенты, роли), *HashiCorp Vault* (политики ACL по сервисам, примеры engine).
+* Инфраструктура и поставка: *Terraform* (AWS: сеть, ALB, EC2, S3, IAM), *Ansible* (Docker на ВМ, PostgreSQL 15), *Dockerfile* для backend, *Kubernetes* + *Kustomize* (`infra/k8s/`), пайплайн *GitLab CI* (сборка, `kubectl kustomize`, деплой).
+* Прикладной контур: микросервисы на *Spring Boot*, *API Gateway*, синхронные и асинхронные вызовы; при необходимости — *Kafka* как шина событий.
+* Данные: *PostgreSQL* (master / read replicas), *Redis* (кэш), объектное хранилище бэкапов; политики масштабирования и резервирования.
+* Идентификация и секреты в рантайме: *OAuth 2.0 / OIDC / JWT*, *Keycloak*, *Vault*.
+* Observability: *Prometheus*, *Grafana*, *Alertmanager* (манифесты в кластере); ещё *Fluent Bit*, *Vector*, *Elasticsearch*, *Loki*; трассировка *OpenTelemetry* → *Jaeger* / *Zipkin*; APM (*New Relic* / *Datadog* или аналог).
+
+<<< 
+
+== Итого
+
+*Выводы* — цель проекта достигнута: зафиксированы требования, архитектура, данные, безопасность, мониторинг и контур поставки; репозиторий содержит воспроизводимые конфигурации.
+
+<<<
+
+== Вопросы
+
+*???* 
+
+<<<
+
+== Спасибо!
+
+[.text-center]
+*Спасибо за внимание!*
