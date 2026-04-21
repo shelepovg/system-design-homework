@@ -89,10 +89,10 @@ npx skills add https://likec4.dev/
 === Пример на базе моего проекта
 
 Публичный пример с визуализацией архитектуры в LikeC4:
-https://shelepovg.github.io/system-design-homework[system-design-homework]
+https://shelepovg.github.io/system-design-homework[system-design]
 
 Исходный код проекта:
-https://github.com/shelepovg/system-design-homework[shelepovg/system-design-homework]
+https://github.com/shelepovg/system-design-homework[system-design-code]
 
 Кратко о проекте:
 
